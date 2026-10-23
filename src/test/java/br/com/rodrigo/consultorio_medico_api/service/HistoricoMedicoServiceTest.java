@@ -2,6 +2,7 @@ package br.com.rodrigo.consultorio_medico_api.service;
 
 import br.com.rodrigo.consultorio_medico_api.dto.exame_medico.ExameMedicoRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.exame_medico.ExameMedicoResponse;
+import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoDetalhadoResponse;
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoResponse;
 import br.com.rodrigo.consultorio_medico_api.entity.Consulta;
@@ -24,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -96,6 +98,43 @@ class HistoricoMedicoServiceTest {
                 () -> service.criarHistorico(pacienteId, UUID.randomUUID(), UUID.randomUUID(),
                         new HistoricoMedicoRequest("Diagnóstico", null, null)));
         verify(historicoMedicoRepository, never()).save(any(HistoricoMedico.class));
+    }
+
+    @Test
+    void deveBuscarHistoricosDoPacienteComExames() {
+        // given
+        UUID pacienteId = UUID.randomUUID();
+        Paciente paciente = new Paciente();
+        HistoricoMedico historico = new HistoricoMedico();
+        ExameMedicoResponse exame = new ExameMedicoResponse(UUID.randomUUID(), "Hemograma", "Normal",
+                LocalDateTime.now(), null);
+        HistoricoMedicoDetalhadoResponse response = new HistoricoMedicoDetalhadoResponse(UUID.randomUUID(),
+                "Paciente", "Médico", "REALIZADA", "Hipertensão", "Losartana", null, LocalDateTime.now(),
+                List.of(exame));
+
+        when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.of(paciente));
+        when(historicoMedicoRepository.findByPaciente(paciente)).thenReturn(List.of(historico));
+        when(historicoMedicoMapper.toDetalhadoOutputList(List.of(historico))).thenReturn(List.of(response));
+
+        // when
+        List<HistoricoMedicoDetalhadoResponse> resultado = service.buscarPorPaciente(pacienteId);
+
+        // then
+        assertEquals(1, resultado.size());
+        assertEquals(response, resultado.getFirst());
+        assertEquals(1, resultado.getFirst().exames().size());
+        verify(historicoMedicoRepository).findByPaciente(paciente);
+    }
+
+    @Test
+    void deveLancarNaoEncontradoAoBuscarHistoricoDePacienteInexistente() {
+        // given
+        UUID pacienteId = UUID.randomUUID();
+        when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.empty());
+
+        // when / then
+        assertThrows(RecursoNaoEncontradoException.class, () -> service.buscarPorPaciente(pacienteId));
+        verify(historicoMedicoRepository, never()).findByPaciente(any(Paciente.class));
     }
 
     @Test

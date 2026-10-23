@@ -3,6 +3,7 @@ package br.com.rodrigo.consultorio_medico_api.controller;
 import br.com.rodrigo.consultorio_medico_api.config.SecurityConfig;
 import br.com.rodrigo.consultorio_medico_api.dto.consulta.ConsultaResponse;
 import br.com.rodrigo.consultorio_medico_api.dto.exame_medico.ExameMedicoResponse;
+import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoDetalhadoResponse;
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoResponse;
 import br.com.rodrigo.consultorio_medico_api.dto.medico.MedicoResponse;
 import br.com.rodrigo.consultorio_medico_api.dto.paciente.PacienteResponse;
@@ -204,6 +205,69 @@ class SegurancaControllersTest {
                         .content("""
                                 {"diagnostico":"Hipertensão"}
                                 """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void deveRetornar401QuandoNaoHaCredenciaisAoBuscarHistoricoMedico() throws Exception {
+        mockMvc.perform(get("/historico-medico/paciente/{id}", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void devePermitirMedicoBuscarHistoricoMedicoPorPaciente() throws Exception {
+        when(historicoMedicoService.buscarPorPaciente(any()))
+                .thenReturn(List.of(new HistoricoMedicoDetalhadoResponse(UUID.randomUUID(), "João", "Dr. Carlos",
+                        "REALIZADA", "Hipertensão", "Losartana", null, LocalDateTime.now(), List.of())));
+
+        mockMvc.perform(get("/historico-medico/paciente/{id}", UUID.randomUUID())
+                        .with(user("medico").roles("MEDICO")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].diagnostico").value("Hipertensão"))
+                .andExpect(jsonPath("$[0].exames").isArray());
+    }
+
+    @Test
+    void devePermitirAdminBuscarHistoricoMedicoPorPaciente() throws Exception {
+        when(historicoMedicoService.buscarPorPaciente(any())).thenReturn(List.of());
+
+        mockMvc.perform(get("/historico-medico/paciente/{id}", UUID.randomUUID())
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void deveRetornar403QuandoRecepcionistaBuscaHistoricoMedico() throws Exception {
+        mockMvc.perform(get("/historico-medico/paciente/{id}", UUID.randomUUID())
+                        .with(user("recepcao").roles("RECEPCIONISTA")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void devePermitirMedicoBuscarPacientePorCpf() throws Exception {
+        when(pacienteService.findByCpf("12345678901"))
+                .thenReturn(new PacienteResponse(UUID.randomUUID(), "João", "12345678901",
+                        LocalDate.of(1990, 1, 1), Paciente.Genero.MASCULINO));
+
+        mockMvc.perform(get("/paciente/busca/{cpf}", "12345678901")
+                        .with(user("medico").roles("MEDICO")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cpf").value("12345678901"));
+    }
+
+    @Test
+    void devePermitirMedicoListarPacientes() throws Exception {
+        when(pacienteService.findAll()).thenReturn(List.of());
+
+        mockMvc.perform(get("/paciente/busca/all")
+                        .with(user("medico").roles("MEDICO")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void deveRetornar403QuandoPacienteTentaListarPacientes() throws Exception {
+        mockMvc.perform(get("/paciente/busca/all")
+                        .with(user("paciente").roles("PACIENTE")))
                 .andExpect(status().isForbidden());
     }
 
