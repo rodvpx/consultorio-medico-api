@@ -168,13 +168,21 @@ curl -u ana@consultorio.local:123456 -H 'Content-Type: application/json' \
 
 ## Testes e cobertura
 
+Suíte rápida, sem Docker (H2 em memória, Flyway desabilitado no perfil `test`):
+
+```bash
+./mvnw test
+```
+
+Suíte completa, com Docker (inclui o teste de migrations contra PostgreSQL 17 real):
+
 ```bash
 ./mvnw clean verify
 ```
 
-O comando executa os testes unitários, os testes de segurança com MockMvc, gera o relatório JaCoCo e empacota a aplicação. O relatório fica em `target/site/jacoco/index.html`.
+O `verify` executa os testes unitários e de segurança com MockMvc, roda o `FlywayMigrationIT` pelo Failsafe e gera o relatório JaCoCo em `target/site/jacoco/index.html`. O teste de integração usa Testcontainers, sobe um PostgreSQL 17, aplica as migrations e valida o schema com `ddl-auto: validate`.
 
-Os testes usam H2 em memória no perfil `test`, com Flyway desabilitado. Nenhum banco externo é necessário.
+Sem Docker, o `FlywayMigrationIT` é ignorado automaticamente (`@Testcontainers(disabledWithoutDocker = true)`) e o restante da suíte continua passando com H2. O CI do GitHub Actions roda em `ubuntu-latest`, que já tem Docker, então a validação real das migrations acontece a cada push e pull request.
 
 ## Banco de dados e migrations
 
