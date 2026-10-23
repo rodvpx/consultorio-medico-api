@@ -143,6 +143,13 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.13</version>
+                <configuration>
+                    <!-- Código gerado pelo MapStruct não entra no relatório de cobertura. -->
+                    <excludes>
+                        <exclude>**/*MapperImpl.class</exclude>
+                        <exclude>**/*MapperImpl*.class</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
