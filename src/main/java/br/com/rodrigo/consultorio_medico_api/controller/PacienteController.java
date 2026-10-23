@@ -59,7 +59,7 @@ public class PacienteController {
             @ApiResponse(responseCode = "404", description = "Paciente não encontrado")
     })
     @GetMapping("/busca/{cpf}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA', 'MEDICO')")
     public ResponseEntity<PacienteResponse> buscarPaciente(@PathVariable String cpf) {
         return ResponseEntity.status(HttpStatus.OK).body(pacienteService.findByCpf(cpf));
     }
@@ -67,7 +67,7 @@ public class PacienteController {
     @Operation(summary = "Lista todos os pacientes")
     @ApiResponse(responseCode = "200", description = "Lista de pacientes")
     @GetMapping("/busca/all")
-    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'RECEPCIONISTA', 'MEDICO')")
     public ResponseEntity<List<PacienteResponse>> buscarTodosPacientes() {
         return ResponseEntity.status(HttpStatus.OK).body(pacienteService.findAll());
     }

@@ -2,6 +2,7 @@ package br.com.rodrigo.consultorio_medico_api.service;
 
 import br.com.rodrigo.consultorio_medico_api.dto.exame_medico.ExameMedicoRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.exame_medico.ExameMedicoResponse;
+import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoDetalhadoResponse;
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoResponse;
 import br.com.rodrigo.consultorio_medico_api.exception.RecursoNaoEncontradoException;
@@ -11,8 +12,10 @@ import br.com.rodrigo.consultorio_medico_api.entity.*;
 import br.com.rodrigo.consultorio_medico_api.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -56,6 +59,15 @@ public class HistoricoMedicoService {
         historicoMedico.setDataRegistro(LocalDateTime.now());
 
         return historicoMedicoMapper.toOutput(historicoMedicoRepository.save(historicoMedico));
+    }
+
+    // Buscar históricos de um paciente, com os exames vinculados
+    @Transactional(readOnly = true)
+    public List<HistoricoMedicoDetalhadoResponse> buscarPorPaciente(UUID pacienteId) {
+        Paciente paciente = pacienteRepository.findById(pacienteId)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Paciente não encontrado."));
+
+        return historicoMedicoMapper.toDetalhadoOutputList(historicoMedicoRepository.findByPaciente(paciente));
     }
 
     // Adicionar exame médico ao histórico

@@ -2,6 +2,7 @@ package br.com.rodrigo.consultorio_medico_api.controller;
 
 import br.com.rodrigo.consultorio_medico_api.dto.exame_medico.ExameMedicoRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.exame_medico.ExameMedicoResponse;
+import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoDetalhadoResponse;
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoResponse;
 import br.com.rodrigo.consultorio_medico_api.service.HistoricoMedicoService;
@@ -16,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Histórico médico")
@@ -44,6 +46,19 @@ public class HistoricoMedicoController {
                                                                 @Valid @RequestBody HistoricoMedicoRequest historicoInput) {
         HistoricoMedicoResponse historicoMedicoOutput = historicoMedicoService.criarHistorico(pacienteId, medicoId, consultaId, historicoInput);
         return ResponseEntity.status(HttpStatus.CREATED).body(historicoMedicoOutput);
+    }
+
+    @Operation(summary = "Busca os históricos médicos de um paciente, com os exames")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Históricos encontrados"),
+            @ApiResponse(responseCode = "404", description = "Paciente não encontrado")
+    })
+    @GetMapping("/paciente/{pacienteId}")
+    @PreAuthorize("hasAnyRole('MEDICO', 'ADMIN')")
+    public ResponseEntity<List<HistoricoMedicoDetalhadoResponse>> buscarHistoricosPorPaciente(
+            @PathVariable UUID pacienteId) {
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(historicoMedicoService.buscarPorPaciente(pacienteId));
     }
 
     @Operation(summary = "Adiciona um exame a um histórico médico")
