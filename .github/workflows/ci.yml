@@ -21,7 +21,7 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Build, testes e cobertura
+      - name: Build, testes unitários, integração com PostgreSQL e cobertura
         run: ./mvnw -B clean verify
 
       - name: Build da imagem Docker
