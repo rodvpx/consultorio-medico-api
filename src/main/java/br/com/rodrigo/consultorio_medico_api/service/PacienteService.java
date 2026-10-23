@@ -2,8 +2,11 @@ package br.com.rodrigo.consultorio_medico_api.service;
 
 import br.com.rodrigo.consultorio_medico_api.dto.paciente.PacienteRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.paciente.PacienteResponse;
+import br.com.rodrigo.consultorio_medico_api.exception.ConflitoException;
+import br.com.rodrigo.consultorio_medico_api.exception.RecursoNaoEncontradoException;
 import br.com.rodrigo.consultorio_medico_api.mapper.PacienteMapper;
 import br.com.rodrigo.consultorio_medico_api.entity.Paciente;
+import br.com.rodrigo.consultorio_medico_api.entity.Role;
 import br.com.rodrigo.consultorio_medico_api.entity.Usuario;
 import br.com.rodrigo.consultorio_medico_api.repository.PacienteRepository;
 import br.com.rodrigo.consultorio_medico_api.repository.UsuarioRepository;
@@ -32,21 +35,20 @@ public class PacienteService {
 
     // Criar paciente
     public PacienteResponse save(PacienteRequest input) {
-        // Verifica CPF e e-mail
-        if (verificarSeCpfExiste(input.cpf()) || verificarSeEmailJaCadastrado(input.usuario().email())) {
-            System.out.println("ERROR: CPF ou email já cadastrados");
-            return null;
+        if (verificarSeCpfExiste(input.cpf())) {
+            throw new ConflitoException("Já existe um paciente cadastrado com o CPF informado.");
+        }
+        if (verificarSeEmailJaCadastrado(input.usuario().email())) {
+            throw new ConflitoException("Já existe um usuário cadastrado com o e-mail informado.");
         }
 
-        // Cria e salva o usuário
         Usuario usuario = new Usuario();
         usuario.setEmail(input.usuario().email());
         usuario.setSenha(passwordEncoder.encode(input.usuario().senha()));
-        usuario.setRole("ROLE_PACIENTE");
+        usuario.setRole(Role.PACIENTE);
 
         usuarioRepository.save(usuario);
 
-        // Cria e salva o paciente
         Paciente paciente = pacienteMapper.toEntity(input);
         paciente.setUsuario(usuario);
 
@@ -56,7 +58,11 @@ public class PacienteService {
     // Atualizar paciente
     public PacienteResponse update(UUID id, PacienteRequest input) {
         Paciente pacienteExistente = pacienteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Paciente não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Paciente não encontrado."));
+
+        if (!pacienteExistente.getCpf().equals(input.cpf()) && verificarSeCpfExiste(input.cpf())) {
+            throw new ConflitoException("Já existe um paciente cadastrado com o CPF informado.");
+        }
 
         pacienteExistente.setNome(input.nome());
         pacienteExistente.setCpf(input.cpf());
@@ -71,7 +77,7 @@ public class PacienteService {
     // Buscar paciente por CPF
     public PacienteResponse findByCpf(String cpf) {
         Paciente paciente = pacienteRepository.findByCpf(cpf)
-                .orElseThrow(() -> new RuntimeException("Paciente com CPF '" + cpf + "' não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Paciente com CPF '" + cpf + "' não encontrado."));
 
         return pacienteMapper.toOutput(paciente);
     }
@@ -84,7 +90,7 @@ public class PacienteService {
     // Excluir paciente
     public void excluirPaciente(UUID id) {
         Paciente paciente = pacienteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Paciente não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Paciente não encontrado."));
 
         usuarioRepository.delete(paciente.getUsuario());
         pacienteRepository.delete(paciente);
@@ -100,4 +106,3 @@ public class PacienteService {
         return usuarioRepository.existsByEmail(email);
     }
 }
-

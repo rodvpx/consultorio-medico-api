@@ -2,8 +2,11 @@ package br.com.rodrigo.consultorio_medico_api.service;
 
 import br.com.rodrigo.consultorio_medico_api.dto.medico.MedicoRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.medico.MedicoResponse;
+import br.com.rodrigo.consultorio_medico_api.exception.ConflitoException;
+import br.com.rodrigo.consultorio_medico_api.exception.RecursoNaoEncontradoException;
 import br.com.rodrigo.consultorio_medico_api.mapper.MedicoMapper;
 import br.com.rodrigo.consultorio_medico_api.entity.Medico;
+import br.com.rodrigo.consultorio_medico_api.entity.Role;
 import br.com.rodrigo.consultorio_medico_api.entity.Usuario;
 import br.com.rodrigo.consultorio_medico_api.repository.MedicoRepository;
 import br.com.rodrigo.consultorio_medico_api.repository.UsuarioRepository;
@@ -32,35 +35,34 @@ public class MedicoService {
 
     // Criar médico
     public MedicoResponse save(MedicoRequest input) {
-        // Criptografar senha
-        String senhaCriptografada = passwordEncoder.encode(input.usuario().senha());
-
-        // Verificar CRM e e-mail
-        if (verificarSeCrmExiste(input.crm()) || verificarSeEmailJaCadastrado(input.usuario().email())) {
-            System.out.println("ERROR: Crm ou email já cadastrados");
-            return null;
+        if (verificarSeCrmExiste(input.crm())) {
+            throw new ConflitoException("Já existe um médico cadastrado com o CRM informado.");
+        }
+        if (verificarSeEmailJaCadastrado(input.usuario().email())) {
+            throw new ConflitoException("Já existe um usuário cadastrado com o e-mail informado.");
         }
 
-        // Criar e salvar usuário
         Usuario usuario = new Usuario();
         usuario.setEmail(input.usuario().email());
-        usuario.setSenha(senhaCriptografada);
-        usuario.setRole("ROLE_MEDICO");
+        usuario.setSenha(passwordEncoder.encode(input.usuario().senha()));
+        usuario.setRole(Role.MEDICO);
 
         usuarioRepository.save(usuario);
 
-        // Criar entidade Médico com o usuário associado
         Medico medico = medicoMapper.toEntity(input);
         medico.setUsuario(usuario);
 
-        // Salvar e retornar o DTO de saída
         return medicoMapper.toOutput(medicoRepository.save(medico));
     }
 
     // Atualizar médico
     public MedicoResponse update(UUID id, MedicoRequest input) {
         Medico medicoExistente = medicoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Médico não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Médico não encontrado."));
+
+        if (!medicoExistente.getCrm().equals(input.crm()) && verificarSeCrmExiste(input.crm())) {
+            throw new ConflitoException("Já existe um médico cadastrado com o CRM informado.");
+        }
 
         medicoExistente.setNome(input.nome());
         medicoExistente.setTelefone(input.telefone());
@@ -76,7 +78,7 @@ public class MedicoService {
         List<Medico> medicos = medicoRepository.findByNome(nome);
 
         if (medicos.isEmpty()) {
-            throw new RuntimeException("Nenhum médico encontrado com o nome '" + nome + "'");
+            throw new RecursoNaoEncontradoException("Nenhum médico encontrado com o nome '" + nome + "'.");
         }
 
         return medicoMapper.toOutputList(medicos);
@@ -84,7 +86,7 @@ public class MedicoService {
 
     public MedicoResponse findByCrm(String crm) {
         Medico medico = medicoRepository.findByCrm(crm)
-                .orElseThrow(() -> new RuntimeException("Médico com CRM '" + crm + "' não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Médico com CRM '" + crm + "' não encontrado."));
 
         return medicoMapper.toOutput(medico);
     }
@@ -95,7 +97,7 @@ public class MedicoService {
 
     public void excluirMedico(UUID id) {
         Medico medico = medicoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Médico não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Médico não encontrado."));
 
         usuarioRepository.delete(medico.getUsuario());
         medicoRepository.delete(medico);

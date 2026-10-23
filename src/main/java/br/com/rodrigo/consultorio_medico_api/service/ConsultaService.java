@@ -6,6 +6,8 @@ import br.com.rodrigo.consultorio_medico_api.entity.Consulta;
 import br.com.rodrigo.consultorio_medico_api.entity.Medico;
 import br.com.rodrigo.consultorio_medico_api.entity.Paciente;
 import br.com.rodrigo.consultorio_medico_api.entity.Recepcionista;
+import br.com.rodrigo.consultorio_medico_api.exception.RecursoNaoEncontradoException;
+import br.com.rodrigo.consultorio_medico_api.exception.RegraDeNegocioException;
 import br.com.rodrigo.consultorio_medico_api.mapper.ConsultaMapper;
 import br.com.rodrigo.consultorio_medico_api.repository.ConsultaRepository;
 import br.com.rodrigo.consultorio_medico_api.repository.MedicoRepository;
@@ -35,18 +37,15 @@ public class ConsultaService {
         this.consultaMapper = consultaMapper;
     }
 
-
     // Agendar uma consulta
     public ConsultaResponse agendarConsulta(ConsultaRequest consultaInput) {
-        // Verifica se o paciente, médico e recepcionista existem
         Paciente paciente = pacienteRepository.findById(consultaInput.pacienteId())
-                .orElseThrow(() -> new RuntimeException("Paciente não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Paciente não encontrado."));
         Medico medico = medicoRepository.findById(consultaInput.medicoId())
-                .orElseThrow(() -> new RuntimeException("Médico não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Médico não encontrado."));
         Recepcionista recepcionista = recepcionistaRepository.findById(consultaInput.recepcionistaId())
-                .orElseThrow(() -> new RuntimeException("Recepcionista não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Recepcionista não encontrado."));
 
-        // Criação da consulta
         Consulta consulta = new Consulta();
         consulta.setPaciente(paciente);
         consulta.setMedico(medico);
@@ -61,8 +60,12 @@ public class ConsultaService {
 
     // Atualizar status da consulta
     public ConsultaResponse atualizarStatus(UUID id, Consulta.StatusConsulta status) {
+        if (status == null) {
+            throw new RegraDeNegocioException("O status da consulta é obrigatório.");
+        }
+
         Consulta consulta = consultaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Consulta não encontrada"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Consulta não encontrada."));
 
         consulta.setStatus(status);
         return consultaMapper.toOutput(consultaRepository.save(consulta));
@@ -71,7 +74,7 @@ public class ConsultaService {
     // Buscar consultas de um paciente
     public List<ConsultaResponse> buscarConsultasPorPaciente(UUID pacienteId) {
         Paciente paciente = pacienteRepository.findById(pacienteId)
-                .orElseThrow(() -> new RuntimeException("Paciente não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Paciente não encontrado."));
 
         List<Consulta> consultas = consultaRepository.findByPaciente(paciente);
         return consultaMapper.toOutputList(consultas);
