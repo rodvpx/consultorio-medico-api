@@ -19,7 +19,7 @@ import java.util.UUID;
 
 @Tag(name = "Médicos")
 @RestController
-@RequestMapping("/medicos")
+@RequestMapping("/medico")
 public class MedicoController {
 
     private final MedicoService medicoService;

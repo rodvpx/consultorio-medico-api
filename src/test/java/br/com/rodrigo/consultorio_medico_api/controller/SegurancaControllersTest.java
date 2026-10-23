@@ -124,7 +124,7 @@ class SegurancaControllersTest {
         when(medicoService.save(any())).thenReturn(new MedicoResponse(UUID.randomUUID(), "Dr. Carlos", "123456",
                 Medico.Especialidade.CARDIOLOGIA, LocalDate.of(2023, 1, 1), true));
 
-        mockMvc.perform(post("/medicos/cadastro")
+        mockMvc.perform(post("/medico/cadastro")
                         .with(user("admin").roles("ADMIN"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMedico()))
@@ -133,7 +133,7 @@ class SegurancaControllersTest {
 
     @Test
     void deveRetornar403QuandoRecepcionistaTentaCadastrarMedico() throws Exception {
-        mockMvc.perform(post("/medicos/cadastro")
+        mockMvc.perform(post("/medico/cadastro")
                         .with(user("recepcao").roles("RECEPCIONISTA"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonMedico()))
@@ -144,7 +144,7 @@ class SegurancaControllersTest {
     void devePermitirQualquerUsuarioAutenticadoListarMedicos() throws Exception {
         when(medicoService.findAll()).thenReturn(List.of());
 
-        mockMvc.perform(get("/medicos/busca/all")
+        mockMvc.perform(get("/medico/busca/all")
                         .with(user("paciente").roles("PACIENTE")))
                 .andExpect(status().isOk());
     }
