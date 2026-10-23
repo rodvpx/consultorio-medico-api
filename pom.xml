@@ -63,10 +63,10 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Migrations -->
+        <!-- Migrations: no Spring Boot 4 o starter inclui flyway-core e a auto-configuração -->
         <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
 
         <dependency>
