@@ -25,5 +25,7 @@ public class Usuario {
     @NotNull
     @Size(min = 5, message = "A senha deve ter no mínimo 5 caracteres.")
     private String senha;
-    private String role;
+
+    @Convert(converter = RoleConverter.class)
+    private Role role;
 }
