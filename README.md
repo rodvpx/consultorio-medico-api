@@ -11,6 +11,7 @@ API REST para gestão de um consultório médico: pacientes, médicos, recepcion
 - PostgreSQL 17, Flyway e Hibernate
 - MapStruct e Lombok
 - JUnit 5, Mockito, MockMvc, Spring Security Test e JaCoCo
+- Testcontainers 2 com PostgreSQL 17
 - Maven Wrapper, Docker e Docker Compose
 - springdoc-openapi (Swagger UI)
 
@@ -75,7 +76,7 @@ Papéis:
 
 - `ADMIN`: administra usuários e acessa todos os recursos.
 - `RECEPCIONISTA`: cadastra e consulta pacientes, agenda consultas e altera status.
-- `MEDICO`: consulta médicos, consultas por paciente, históricos e exames.
+- `MEDICO`: consulta médicos, busca pacientes, consultas por paciente, históricos com exames e cria históricos e exames.
 - `PACIENTE`: papel legado para usuários de pacientes já existentes, sem permissões administrativas.
 
 ### Matriz de permissões
@@ -184,6 +185,8 @@ O `verify` executa os testes unitários e de segurança com MockMvc, roda o `Fly
 
 Sem Docker, o `FlywayMigrationIT` é ignorado automaticamente (`@Testcontainers(disabledWithoutDocker = true)`) e o restante da suíte continua passando com H2. O CI do GitHub Actions roda em `ubuntu-latest`, que já tem Docker, então a validação real das migrations acontece a cada push e pull request.
 
+Na última execução desta versão, a cobertura foi de 98,1% de linhas e 90,3% de branches. O JaCoCo não impõe mínimo obrigatório no build, os números servem como referência do estado atual.
+
 ## Banco de dados e migrations
 
 O schema é versionado pelo Flyway em `src/main/resources/db/migration`. O Hibernate está em `ddl-auto: validate`, então a aplicação não altera o schema sozinha. O projeto é novo e não usa baseline: se o banco já tiver tabelas sem o histórico do Flyway, a inicialização falha de forma explícita em vez de pular a V1. Se o schema local estiver divergente, recrie o volume com `docker compose down -v`.
@@ -195,6 +198,32 @@ O schema é versionado pelo Flyway em `src/main/resources/db/migration`. O Hiber
 - JWT e refresh token estão fora do escopo deste projeto.
 - Erros de autenticação e autorização retornam JSON padronizado com status 401 ou 403.
 - O hash de senha não é exposto em nenhum DTO de resposta.
+
+## Dados sensíveis e LGPD
+
+O sistema armazena dados pessoais e dados de saúde, como CPF, endereço, telefone, diagnóstico, prescrição e resultados de exames. Esses dados são classificados como dados pessoais sensíveis pela LGPD (Lei 13.709/2018) e exigem cuidado proporcional ao risco.
+
+Este é um projeto de estudo e portfólio. Ele não deve ser usado em produção real com dados de pacientes sem medidas adicionais de segurança, privacidade e conformidade.
+
+O que o projeto já faz:
+
+- Senhas armazenadas apenas como hash BCrypt.
+- Acesso por papéis (`ADMIN`, `MEDICO`, `RECEPCIONISTA`, `PACIENTE`), com autorização nos endpoints.
+- Respostas e DTOs sem senha ou hash.
+- Credenciais do banco e do ADMIN inicial vindas de variáveis de ambiente, fora do versionamento.
+- Schema versionado pelo Flyway e validado contra as entidades.
+
+O que falta para um uso real:
+
+- TLS/HTTPS obrigatório e criptografia em repouso no banco e nos backups.
+- Auditoria de acesso e de alterações em dados de saúde.
+- Base legal e registro de consentimento quando aplicável.
+- Política de retenção, descarte seguro e minimização de dados.
+- Controle de acesso mais granular, revisão periódica de permissões e resposta a incidentes.
+- Anonimização ou uso de dados sintéticos em ambientes de teste e demonstração.
+- Encarregado de proteção de dados (DPO) e processos de atendimento aos titulares.
+
+Nunca use dados reais de pacientes neste projeto.
 
 ## Estrutura
 
