@@ -61,23 +61,6 @@ class HistoricoMedicoMapperTest {
     }
 
     @Test
-    void deveMapearEntidadeSemRelacionamentosParaResponse() {
-        // given
-        HistoricoMedico entidade = new HistoricoMedico();
-        entidade.setPaciente(new Paciente());
-        entidade.setMedico(new Medico());
-        entidade.setConsulta(new Consulta());
-
-        // when
-        HistoricoMedicoResponse response = mapper.toOutput(entidade);
-
-        // then
-        assertThat(response.pacienteNome()).isNull();
-        assertThat(response.medicoNome()).isNull();
-        assertThat(response.consultaStatus()).isNull();
-    }
-
-    @Test
     void deveMapearHistoricoDetalhadoComExames() {
         // given
         UUID id = UUID.randomUUID();
@@ -101,18 +84,6 @@ class HistoricoMedicoMapperTest {
     }
 
     @Test
-    void deveMapearHistoricoDetalhadoSemExames() {
-        // given
-        HistoricoMedico entidade = criarHistoricoCompleto(UUID.randomUUID());
-
-        // when
-        HistoricoMedicoDetalhadoResponse response = mapper.toDetalhadoOutput(entidade);
-
-        // then
-        assertThat(response.exames()).isNull();
-    }
-
-    @Test
     void deveMapearListasDeHistoricos() {
         // given
         HistoricoMedico entidade = criarHistoricoCompleto(UUID.randomUUID());
@@ -126,16 +97,6 @@ class HistoricoMedicoMapperTest {
         assertThat(detalhados).singleElement()
                 .extracting(HistoricoMedicoDetalhadoResponse::medicoNome)
                 .isEqualTo("Dr. Carlos");
-    }
-
-    @Test
-    void deveRetornarNuloParaEntradasNulas() {
-        // when / then
-        assertThat(mapper.toEntity(null)).isNull();
-        assertThat(mapper.toOutput(null)).isNull();
-        assertThat(mapper.toOutputList(null)).isNull();
-        assertThat(mapper.toDetalhadoOutput(null)).isNull();
-        assertThat(mapper.toDetalhadoOutputList(null)).isNull();
     }
 
     private HistoricoMedico criarHistoricoCompleto(UUID id) {

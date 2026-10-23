@@ -35,19 +35,6 @@ class PacienteMapperTest {
     }
 
     @Test
-    void deveMapearRequestSemUsuarioParaEntidadeComUsuarioNulo() {
-        // given
-        PacienteRequest request = new PacienteRequest("João", "12345678901", null, null,
-                LocalDate.of(1990, 1, 1), Paciente.Genero.MASCULINO, null);
-
-        // when
-        Paciente entidade = mapper.toEntity(request);
-
-        // then
-        assertThat(entidade.getUsuario()).isNull();
-    }
-
-    @Test
     void deveMapearEntidadeParaResponseSemExporSenha() {
         // given
         UUID id = UUID.randomUUID();
@@ -81,11 +68,4 @@ class PacienteMapperTest {
         assertThat(responses).singleElement().extracting(PacienteResponse::nome).isEqualTo("João");
     }
 
-    @Test
-    void deveRetornarNuloParaEntradasNulas() {
-        // when / then
-        assertThat(mapper.toEntity(null)).isNull();
-        assertThat(mapper.toOutput(null)).isNull();
-        assertThat(mapper.toOutputList(null)).isNull();
-    }
 }

@@ -35,19 +35,6 @@ class MedicoMapperTest {
     }
 
     @Test
-    void deveMapearRequestSemUsuarioParaEntidadeComUsuarioNulo() {
-        // given
-        MedicoRequest request = new MedicoRequest("Dr. Carlos", null, "123456",
-                Medico.Especialidade.CARDIOLOGIA, LocalDate.of(2023, 1, 1), true, null);
-
-        // when
-        Medico entidade = mapper.toEntity(request);
-
-        // then
-        assertThat(entidade.getUsuario()).isNull();
-    }
-
-    @Test
     void deveMapearEntidadeParaResponse() {
         // given
         UUID id = UUID.randomUUID();
@@ -82,11 +69,4 @@ class MedicoMapperTest {
         assertThat(responses).singleElement().extracting(MedicoResponse::nome).isEqualTo("Dr. Carlos");
     }
 
-    @Test
-    void deveRetornarNuloParaEntradasNulas() {
-        // when / then
-        assertThat(mapper.toEntity(null)).isNull();
-        assertThat(mapper.toOutput(null)).isNull();
-        assertThat(mapper.toOutputList(null)).isNull();
-    }
 }

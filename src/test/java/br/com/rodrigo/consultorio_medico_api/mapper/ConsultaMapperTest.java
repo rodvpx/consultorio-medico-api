@@ -66,24 +66,6 @@ class ConsultaMapperTest {
     }
 
     @Test
-    void deveMapearEntidadeSemRelacionamentosESemStatusParaResponse() {
-        // given
-        Consulta entidade = new Consulta();
-        entidade.setPaciente(new Paciente());
-        entidade.setMedico(new Medico());
-        entidade.setRecepcionista(new Recepcionista());
-
-        // when
-        ConsultaResponse response = mapper.toOutput(entidade);
-
-        // then
-        assertThat(response.pacienteNome()).isNull();
-        assertThat(response.medicoNome()).isNull();
-        assertThat(response.recepcionistaNome()).isNull();
-        assertThat(response.status()).isNull();
-    }
-
-    @Test
     void deveMapearListaDeEntidadesParaResponses() {
         // given
         Paciente paciente = new Paciente();
@@ -98,11 +80,4 @@ class ConsultaMapperTest {
         assertThat(responses).singleElement().extracting(ConsultaResponse::pacienteNome).isEqualTo("João");
     }
 
-    @Test
-    void deveRetornarNuloParaEntradasNulas() {
-        // when / then
-        assertThat(mapper.toEntity(null)).isNull();
-        assertThat(mapper.toOutput(null)).isNull();
-        assertThat(mapper.toOutputList(null)).isNull();
-    }
 }

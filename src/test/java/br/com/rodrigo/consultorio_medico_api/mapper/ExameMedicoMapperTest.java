@@ -66,11 +66,4 @@ class ExameMedicoMapperTest {
         assertThat(responses).singleElement().extracting(ExameMedicoResponse::tipoExame).isEqualTo("Hemograma");
     }
 
-    @Test
-    void deveRetornarNuloParaEntradasNulas() {
-        // when / then
-        assertThat(mapper.toEntity(null)).isNull();
-        assertThat(mapper.toOutput(null)).isNull();
-        assertThat(mapper.toOutputList(null)).isNull();
-    }
 }

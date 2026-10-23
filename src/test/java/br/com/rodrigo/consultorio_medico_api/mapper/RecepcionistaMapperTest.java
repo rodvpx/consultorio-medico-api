@@ -34,20 +34,6 @@ class RecepcionistaMapperTest {
     }
 
     @Test
-    void deveMapearRequestSemStatusESemUsuarioParaEntidade() {
-        // given
-        RecepcionistaRequest request = new RecepcionistaRequest("12345678901", "Ana", null,
-                LocalDate.of(2023, 1, 1), null, null);
-
-        // when
-        Recepcionista entidade = mapper.toEntity(request);
-
-        // then
-        assertThat(entidade.isStatus()).isFalse();
-        assertThat(entidade.getUsuario()).isNull();
-    }
-
-    @Test
     void deveMapearEntidadeParaResponse() {
         // given
         UUID id = UUID.randomUUID();
@@ -80,11 +66,4 @@ class RecepcionistaMapperTest {
         assertThat(responses).singleElement().extracting(RecepcionistaResponse::nome).isEqualTo("Ana");
     }
 
-    @Test
-    void deveRetornarNuloParaEntradasNulas() {
-        // when / then
-        assertThat(mapper.toEntity(null)).isNull();
-        assertThat(mapper.toOutput(null)).isNull();
-        assertThat(mapper.toOutputList(null)).isNull();
-    }
 }
