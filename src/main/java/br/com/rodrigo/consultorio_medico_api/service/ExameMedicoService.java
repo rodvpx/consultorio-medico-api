@@ -2,6 +2,7 @@ package br.com.rodrigo.consultorio_medico_api.service;
 
 import br.com.rodrigo.consultorio_medico_api.dto.exame_medico.ExameMedicoRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.exame_medico.ExameMedicoResponse;
+import br.com.rodrigo.consultorio_medico_api.exception.RecursoNaoEncontradoException;
 import br.com.rodrigo.consultorio_medico_api.mapper.ExameMedicoMapper;
 import br.com.rodrigo.consultorio_medico_api.entity.ExameMedico;
 import br.com.rodrigo.consultorio_medico_api.entity.HistoricoMedico;
@@ -9,6 +10,7 @@ import br.com.rodrigo.consultorio_medico_api.repository.ExameMedicoRepository;
 import br.com.rodrigo.consultorio_medico_api.repository.HistoricoMedicoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -27,9 +29,10 @@ public class ExameMedicoService {
     }
 
     // Adicionar um exame médico
+    @Transactional
     public ExameMedicoResponse adicionarExame(UUID historicoMedicoId, ExameMedicoRequest exameInput) {
         HistoricoMedico historicoMedico = historicoMedicoRepository.findById(historicoMedicoId)
-                .orElseThrow(() -> new RuntimeException("Histórico médico não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Histórico médico não encontrado."));
 
         ExameMedico exameMedico = new ExameMedico();
         exameMedico.setHistoricoMedico(historicoMedico);
@@ -38,8 +41,6 @@ public class ExameMedicoService {
         exameMedico.setDataExame(exameInput.dataExame());
         exameMedico.setArquivoUrl(exameInput.arquivoUrl());
 
-        // Salvar exame médico
         return exameMedicoMapper.toOutput(exameMedicoRepository.save(exameMedico));
     }
 }
-

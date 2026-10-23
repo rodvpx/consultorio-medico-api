@@ -1,931 +1,246 @@
 # Consultório Médico API
 
-Uma API robusta e escalável desenvolvida com Spring Boot para gerenciamento completo de um consultório médico, incluindo pacientes, médicos, recepcionistas, consultas e históricos médicos.
+[![CI](https://github.com/rodvpx/consultorio-medico-api/actions/workflows/ci.yml/badge.svg)](https://github.com/rodvpx/consultorio-medico-api/actions/workflows/ci.yml)
 
----
+API REST para gestão de um consultório médico: pacientes, médicos, recepcionistas, consultas, histórico médico e exames. Projeto de portfólio com autenticação HTTP Basic, autorização por papéis, migrations com Flyway, testes automatizados e documentação OpenAPI.
 
-## 🧪 Testes Unitários
+## Stack
 
-### ⚠️ Status Atual: Iniciando Implementação
+- Java 21 e Spring Boot 4.1
+- Spring Web, Spring Data JPA, Spring Security e Bean Validation
+- PostgreSQL 17, Flyway e Hibernate
+- MapStruct e Lombok
+- JUnit 5, Mockito, MockMvc, Spring Security Test e JaCoCo
+- Testcontainers 2 com PostgreSQL 17
+- Maven Wrapper, Docker e Docker Compose
+- springdoc-openapi (Swagger UI)
 
-A API está em fase de **implementação inicial de testes unitários**. Estamos utilizando:
+## Modelo de dados
 
-- **JUnit 5** - Framework de testes
-- **Mockito** - Framework para criar mocks e verificar comportamentos
-- **Spring Boot Test** - Utilities para testes Spring
+- `Usuario`: credenciais e papel (`ADMIN`, `MEDICO`, `RECEPCIONISTA`, `PACIENTE`).
+- `Paciente`: dados pessoais, CPF único e usuário associado.
+- `Medico`: CRM único, especialidade e usuário associado.
+- `Recepcionista`: CPF único e usuário associado.
+- `Consulta`: paciente, médico, recepcionista, data/hora e status.
+- `HistoricoMedico`: paciente, médico, consulta, diagnóstico e prescrição.
+- `ExameMedico`: exame vinculado a um histórico médico.
 
-### Estrutura de Testes
-
-Os testes estão organizados em: `src/test/java/br/com/rodrigo/consultorio_medico_api/`
-
-```
-src/test/
-└── java/br/com/rodrigo/consultorio_medico_api/
-    ├── ConsultorioMedicoApiApplicationTests.java
-    └── service/
-        └── PacienteServiceTest.java
-```
-
-### Testes Existentes
-
-#### 1. Teste de Contexto (ConsultorioMedicoApiApplicationTests.java)
-
-```java
-@SpringBootTest
-class ConsultorioMedicoApiApplicationTests {
-
-    @Test
-    void contextLoads() {
-        // Valida que a aplicação foi carregada corretamente
-    }
-}
+```text
+Usuario 1---N Paciente / Medico / Recepcionista
+Paciente 1---N Consulta N---1 Medico
+Consulta 1---N HistoricoMedico N---1 Paciente
+HistoricoMedico 1---N ExameMedico
 ```
 
-#### 2. Testes de Serviço (PacienteServiceTest.java)
+## Como rodar
 
-Inicialmente implementando testes para o PacienteService
-
-### Executando Testes
-
-#### Rodar Todos os Testes
+Pré-requisito: Docker com Compose.
 
 ```bash
-# Com Maven
-mvn test
-
-# Com Maven (verbose)
-mvn test -X
-
-# Com Maven (arquivo específico)
-mvn test -Dtest=PacienteServiceTest
+cp .env.example .env
+# edite o .env e troque as senhas
+docker compose up -d --build
 ```
 
-#### Rodar Testes com Cobertura
+A API sobe em `http://localhost:8080`. A documentação interativa fica em `http://localhost:8080/swagger-ui/index.html`.
+
+Para parar:
 
 ```bash
-# Adicionar dependência Maven Surefire (já incluída no pom.xml)
-mvn test jacoco:report
-
-# Visualizar relatório
-open target/site/jacoco/index.html
+docker compose down
 ```
 
-### Estrutura de um Teste com Mockito
-
-Exemplo padrão para testes com Mockito:
-
-```java
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.mockito.Mock;
-import org.mockito.InjectMocks;
-import org.mockito.MockitoAnnotations;
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
-
-@ExtendWith(MockitoExtension.class)
-class PacienteServiceTest {
-
-    @Mock
-    private PacienteRepository pacienteRepository;
-
-    @InjectMocks
-    private PacienteService pacienteService;
-
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
-
-    @Test
-    void testSavePaciente() {
-        // Arrange
-        PacienteRequest request = new PacienteRequest(...);
-        Paciente paciente = new Paciente(...);
-        
-        when(pacienteRepository.save(any())).thenReturn(paciente);
-
-        // Act
-        PacienteResponse response = pacienteService.save(request);
-
-        // Assert
-        assertNotNull(response);
-        verify(pacienteRepository, times(1)).save(any());
-    }
-}
-```
-
-
-## 📋 Índice
-
-- [Sobre o Projeto](#sobre-o-projeto)
-- [Tecnologias Utilizadas](#tecnologias-utilizadas)
-- [Estrutura do Projeto](#estrutura-do-projeto)
-- [Pré-requisitos](#pré-requisitos)
-- [Instalação e Configuração](#instalação-e-configuração)
-- [Executando a Aplicação](#executando-a-aplicação)
-- [Autenticação e Autorização](#autenticação-e-autorização)
-- [Endpoints da API](#endpoints-da-api)
-  - [Pacientes](#pacientes)
-  - [Médicos](#médicos)
-  - [Recepcionistas](#recepcionistas)
-  - [Consultas](#consultas)
-  - [Histórico Médico](#histórico-médico)
-- [Exemplos de Requisições](#exemplos-de-requisições)
-- [Notas Importantes](#notas-importantes)
-- [Contribuindo](#contribuindo)
-
----
-
-## 🎯 Sobre o Projeto
-
-A **Consultório Médico API** é um sistema completo de gerenciamento para consultórios médicos, permitindo:
-
-- ✅ Cadastro e gerenciamento de pacientes
-- ✅ Cadastro e gerenciamento de médicos com especialidades
-- ✅ Gerenciamento de recepcionistas
-- ✅ Agendamento e controle de consultas
-- ✅ Histórico médico de pacientes
-- ✅ Registro de exames médicos
-- ✅ Autenticação segura com HTTP Basic Auth
-- ✅ Controle de acesso baseado em papéis (RBAC)
-
-O projeto está em fase de desenvolvimento com foco em implementação de testes unitários robustos.
-
----
-
-## 🛠 Tecnologias Utilizadas
-
-### Backend
-- **Java 21** - Linguagem de programação
-- **Spring Boot 4.1.0** - Framework principal
-- **Spring Data JPA** - Persistência de dados
-- **Spring Security** - Autenticação e autorização
-- **Spring Validation** - Validação de dados
-- **MapStruct 1.5.5** - Mapeamento de DTOs para Entities
-- **Lombok** - Redução de boilerplate
-
-### Database
-- **PostgreSQL 17** - Banco de dados relacional
-- **Hibernate** - ORM (Object-Relational Mapping)
-
-### Build & Testing
-- **Maven 3.9.6** - Gerenciador de dependências
-- **JUnit 5** - Framework de testes unitários
-- **Mockito** - Mock framework (iniciando implementação)
-- **Spring Security Test** - Testes de segurança
-
-### Containerização
-- **Docker** - Containerização da aplicação
-- **Docker Compose** - Orquestração de containers
-
----
-
-## 📁 Estrutura do Projeto
-
-```
-consultorio-medico-api/
-├── src/
-│   ├── main/
-│   │   ├── java/br/com/rodrigo/consultorio_medico_api/
-│   │   │   ├── ConsultorioMedicoApiApplication.java    # Classe principal
-│   │   │   ├── config/
-│   │   │   │   └── SecurityConfig.java                  # Configuração de segurança
-│   │   │   ├── controller/                              # Controladores REST
-│   │   │   │   ├── PacienteController.java
-│   │   │   │   ├── MedicoController.java
-│   │   │   │   ├── RecepcionistaController.java
-│   │   │   │   ├── ConsultaController.java
-│   │   │   │   └── HistoricoMedicoController.java
-│   │   │   ├── service/                                 # Lógica de negócio
-│   │   │   ├── repository/                              # Acesso a dados
-│   │   │   ├── entity/                                  # Entidades JPA
-│   │   │   ├── dto/                                     # Data Transfer Objects
-│   │   │   │   ├── paciente/
-│   │   │   │   ├── medico/
-│   │   │   │   ├── recepcionista/
-│   │   │   │   ├── consulta/
-│   │   │   │   ├── exame_medico/
-│   │   │   │   ├── historico_medico/
-│   │   │   │   └── usuario/
-│   │   │   ├── mapper/                                  # Mapeadores MapStruct
-│   │   │   └── execption/                               # Exceções customizadas
-│   │   └── resources/
-│   │       └── application.yml                          # Configurações da aplicação
-│   └── test/
-│       └── java/br/com/rodrigo/consultorio_medico_api/
-│           └── service/                                 # Testes de serviço
-├── dockerfile
-├── compose.yml
-├── pom.xml
-└── README.md
-```
-
----
-
-## 📦 Pré-requisitos
-
-Antes de começar, você precisará ter instalado:
-
-- **Java 21** ou superior
-- **Maven 3.9.6** ou superior
-- **Docker** e **Docker Compose** (para execução containerizada)
-- **PostgreSQL 17** (se executar sem Docker)
-- **Git** (para clonar o repositório)
-
-### Verificar instalações
+Para recriar o banco do zero (apaga os dados):
 
 ```bash
-# Verificar Java
-java -version
-
-# Verificar Maven
-mvn -version
-
-# Verificar Docker
-docker --version
-docker-compose --version
+docker compose down -v
 ```
 
----
+## Variáveis de ambiente
 
-## 🔧 Instalação e Configuração
+| Variável | Uso |
+| --- | --- |
+| `POSTGRES_DB` | Nome do banco criado pelo container |
+| `POSTGRES_USER` | Usuário do PostgreSQL |
+| `POSTGRES_PASSWORD` | Senha do PostgreSQL |
+| `ADMIN_EMAIL` | E-mail do primeiro usuário ADMIN |
+| `ADMIN_PASSWORD` | Senha do primeiro usuário ADMIN |
 
-### 1. Clonar o Repositório
+O `.env` não é versionado. Use o `.env.example` como modelo. O ADMIN inicial é criado na primeira inicialização apenas se o e-mail ainda não existir. Depois disso, novos recepcionistas e médicos são cadastrados por um ADMIN.
+
+## Autenticação e permissões
+
+A API usa HTTP Basic com sessão stateless. As senhas são armazenadas com BCrypt e nunca aparecem nas respostas.
+
+Papéis:
+
+- `ADMIN`: administra usuários e acessa todos os recursos.
+- `RECEPCIONISTA`: cadastra e consulta pacientes, agenda consultas e altera status.
+- `MEDICO`: consulta médicos, busca pacientes, consultas por paciente, históricos com exames e cria históricos e exames.
+- `PACIENTE`: papel legado para usuários de pacientes já existentes, sem permissões administrativas.
+
+### Matriz de permissões
+
+| Recurso | Endpoint | Papéis |
+| --- | --- | --- |
+| Recepcionista | `POST /recepcionista/cadastro` | ADMIN |
+| Recepcionista | `PUT /recepcionista/atualizar/{id}` | ADMIN |
+| Recepcionista | `GET /recepcionista/busca/{cpf}` e `/busca/all` | ADMIN |
+| Recepcionista | `DELETE /recepcionista/delete/{id}` | ADMIN |
+| Médico | `POST /medico/cadastro` | ADMIN |
+| Médico | `PUT /medico/atualizar/{id}` | ADMIN |
+| Médico | `DELETE /medico/delete/{id}` | ADMIN |
+| Médico | `GET /medico/busca/{nome}`, `/busca/crm/{crm}`, `/busca/all` | Qualquer usuário autenticado |
+| Paciente | `POST /paciente/cadastro` | ADMIN, RECEPCIONISTA |
+| Paciente | `PUT /paciente/atualizar/{id}` | ADMIN, RECEPCIONISTA |
+| Paciente | `GET /paciente/busca/{cpf}` e `/busca/all` | ADMIN, RECEPCIONISTA, MEDICO |
+| Paciente | `DELETE /paciente/delete/{id}` | ADMIN |
+| Consulta | `POST /consulta/agendar` | ADMIN, RECEPCIONISTA |
+| Consulta | `PUT /consulta/status/{id}` | ADMIN, RECEPCIONISTA |
+| Consulta | `GET /consulta/paciente/{pacienteId}` | ADMIN, RECEPCIONISTA, MEDICO |
+| Histórico | `POST /historico-medico/criar/{pacienteId}/{medicoId}/{consultaId}` | MEDICO, ADMIN |
+| Histórico | `GET /historico-medico/paciente/{pacienteId}` | MEDICO, ADMIN |
+| Histórico | `POST /historico-medico/adicionar-exame/{historicoMedicoId}` (obsoleto) | MEDICO, ADMIN |
+| Exame | `POST /exame-medico/adicionar/{historicoMedicoId}` (canônico) | MEDICO, ADMIN |
+
+As rotas de Swagger (`/swagger-ui/**` e `/v3/api-docs/**`) são públicas. Todas as demais exigem autenticação.
+
+## Endpoints
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| POST | `/recepcionista/cadastro` | Cadastra recepcionista |
+| PUT | `/recepcionista/atualizar/{id}` | Atualiza recepcionista |
+| GET | `/recepcionista/busca/{cpf}` | Busca recepcionista por CPF |
+| GET | `/recepcionista/busca/all` | Lista recepcionistas |
+| DELETE | `/recepcionista/delete/{id}` | Exclui recepcionista |
+| POST | `/medico/cadastro` | Cadastra médico |
+| PUT | `/medico/atualizar/{id}` | Atualiza médico |
+| GET | `/medico/busca/{nome}` | Busca médicos por nome |
+| GET | `/medico/busca/crm/{crm}` | Busca médico por CRM |
+| GET | `/medico/busca/all` | Lista médicos |
+| DELETE | `/medico/delete/{id}` | Exclui médico |
+| POST | `/paciente/cadastro` | Cadastra paciente |
+| PUT | `/paciente/atualizar/{id}` | Atualiza paciente |
+| GET | `/paciente/busca/{cpf}` | Busca paciente por CPF |
+| GET | `/paciente/busca/all` | Lista pacientes |
+| DELETE | `/paciente/delete/{id}` | Exclui paciente |
+| POST | `/consulta/agendar` | Agenda consulta |
+| PUT | `/consulta/status/{id}` | Altera status da consulta |
+| GET | `/consulta/paciente/{pacienteId}` | Lista consultas do paciente |
+| POST | `/historico-medico/criar/{pacienteId}/{medicoId}/{consultaId}` | Cria histórico |
+| GET | `/historico-medico/paciente/{pacienteId}` | Lista históricos do paciente com exames |
+| POST | `/historico-medico/adicionar-exame/{historicoMedicoId}` | Adiciona exame ao histórico (obsoleto, use a rota canônica abaixo) |
+| POST | `/exame-medico/adicionar/{historicoMedicoId}` | Adiciona exame ao histórico (rota canônica) |
+
+Exemplos de payloads, respostas, enums e formato de erro: [docs/api.md](docs/api.md).
+
+## Fluxo de exemplo com curl
+
+O exemplo usa `jq` para extrair os IDs retornados.
 
 ```bash
-git clone https://github.com/seu-usuario/consultorio-medico-api.git
-cd consultorio-medico-api
+BASE=http://localhost:8080
+ADMIN=admin@consultorio.local:troque_esta_senha_admin
+
+# 1. Cadastra uma recepcionista como ADMIN
+RECEP=$(curl -s -u "$ADMIN" -H 'Content-Type: application/json' \
+  -d '{"cpf":"98765432100","nome":"Ana","telefone":"(11) 91234-5678","dataContratacao":"2023-01-01","status":true,"usuario":{"email":"ana@consultorio.local","senha":"123456"}}' \
+  "$BASE/recepcionista/cadastro")
+RECEP_ID=$(echo "$RECEP" | jq -r '.id')
+
+# 2. Cadastra um paciente como recepcionista
+PAC=$(curl -s -u ana@consultorio.local:123456 -H 'Content-Type: application/json' \
+  -d '{"nome":"João","cpf":"12345678901","telefone":"(11) 91234-5678","dataNascimento":"1990-01-01","genero":"MASCULINO","usuario":{"email":"joao@consultorio.local","senha":"123456"}}' \
+  "$BASE/paciente/cadastro")
+PAC_ID=$(echo "$PAC" | jq -r '.id')
+
+# 3. Cadastra um médico como ADMIN
+MED=$(curl -s -u "$ADMIN" -H 'Content-Type: application/json' \
+  -d '{"nome":"Dr. Carlos","telefone":"(11) 91234-5678","crm":"123456","especialidade":"CARDIOLOGIA","dataContratacao":"2023-01-01","status":true,"usuario":{"email":"carlos@consultorio.local","senha":"123456"}}' \
+  "$BASE/medico/cadastro")
+MED_ID=$(echo "$MED" | jq -r '.id')
+
+# 4. Agenda uma consulta como recepcionista
+curl -u ana@consultorio.local:123456 -H 'Content-Type: application/json' \
+  -d "{\"pacienteId\":\"$PAC_ID\",\"medicoId\":\"$MED_ID\",\"recepcionistaId\":\"$RECEP_ID\",\"dataHora\":\"2026-12-01T10:00:00\",\"observacoes\":\"Primeira consulta\"}" \
+  "$BASE/consulta/agendar"
 ```
 
-### 2. Configurar Variáveis de Ambiente
+## Testes e cobertura
 
-Crie um arquivo `.env` na raiz do projeto com as variáveis necessárias:
-
-```env
-POSTGRES_DB=consultorio_medico
-POSTGRES_USER=consultorio_user
-POSTGRES_PASSWORD=sua_senha_segura_aqui
-```
-
-### 3. Estrutura do `application.yml`
-
-O arquivo `src/main/resources/application.yml` já está configurado para usar as variáveis de ambiente:
-
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://postgres:5432/consultorio_medico
-    username: ${POSTGRES_USER}
-    password: ${POSTGRES_PASSWORD}
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-```
-
----
-
-## ▶️ Executando a Aplicação
-
-### Opção 1: Com Docker Compose (Recomendado)
+Suíte rápida, sem Docker (H2 em memória, Flyway desabilitado no perfil `test`):
 
 ```bash
-# Construir e iniciar os containers
-docker-compose up -d
-
-# Verificar os logs
-docker-compose logs -f app
-
-# Parar os containers
-docker-compose down
+./mvnw test
 ```
 
-A API estará disponível em: `http://localhost:8080`
-
-### Opção 2: Localmente com Maven
-
-#### Pré-requisitos Adicionais:
-- PostgreSQL rodando localmente na porta 5432
-
-#### Passos:
+Suíte completa, com Docker (inclui o teste de migrations contra PostgreSQL 17 real):
 
 ```bash
-# 1. Instalar dependências
-mvn clean install
-
-# 2. Executar a aplicação
-mvn spring-boot:run
+./mvnw clean verify
 ```
 
-A API estará disponível em: `http://localhost:8080`
+O `verify` executa os testes unitários e de segurança com MockMvc, roda o `FlywayMigrationIT` pelo Failsafe e gera o relatório JaCoCo em `target/site/jacoco/index.html`. O teste de integração usa Testcontainers, sobe um PostgreSQL 17, aplica as migrations e valida o schema com `ddl-auto: validate`.
 
----
+Sem Docker, o `FlywayMigrationIT` é ignorado automaticamente (`@Testcontainers(disabledWithoutDocker = true)`) e o restante da suíte continua passando com H2. O CI do GitHub Actions roda em `ubuntu-latest`, que já tem Docker, então a validação real das migrations acontece a cada push e pull request.
 
-## 🔐 Autenticação e Autorização
+Na última execução desta versão, a cobertura foi de 99,0% de linhas, 92,0% de branches e 99,2% de instruções (397 de 401 linhas, 46 de 50 branches e 2038 de 2054 instruções). Classes geradas pelo MapStruct, como `*MapperImpl`, ficam fora do relatório do JaCoCo. O JaCoCo não impõe mínimo obrigatório no build, os números servem como referência do estado atual.
 
-A API utiliza **HTTP Basic Authentication** com controle de acesso baseado em papéis (RBAC).
+## Banco de dados e migrations
 
-### Papéis Disponíveis
+O schema é versionado pelo Flyway em `src/main/resources/db/migration`. O Hibernate está em `ddl-auto: validate`, então a aplicação não altera o schema sozinha. O projeto é novo e não usa baseline: se o banco já tiver tabelas sem o histórico do Flyway, a inicialização falha de forma explícita em vez de pular a V1. Se o schema local estiver divergente, recrie o volume com `docker compose down -v`.
 
-- **ROLE_ADMIN** - Acesso total ao sistema
-- **ROLE_RECEPCIONISTA** - Gerenciamento de pacientes e consultas
-- **ROLE_MEDICO** - Acesso a histórico médico e exames
-- **ROLE_PACIENTE** - Acesso aos próprios dados
+## Transações
 
-### Autenticação HTTP Basic
+As operações de escrita que gravam mais de uma entidade rodam em uma única transação do Spring. É o caso de paciente, médico e recepcionista, que salvam o `Usuario` e depois a entidade de domínio: se a segunda gravação falhar, o `Usuario` é revertido e o e-mail não fica bloqueado. As validações de duplicidade de CPF, CRM e e-mail acontecem antes de qualquer gravação. Consulta, histórico médico e exame também usam transação nas escritas, e as leituras usam `@Transactional(readOnly = true)`.
 
-Use as credenciais para autenticar:
+## Segurança
 
-```bash
-# Exemplo com curl
-curl -u email@example.com:senha http://localhost:8080/api/paciente/busca/all
+- HTTP Basic em toda requisição, sem sessão no servidor (`SessionCreationPolicy.STATELESS`).
+- CSRF desativado porque a API é stateless e não usa cookies de sessão. Isso é aceitável para Basic Auth em API, mas exige HTTPS em produção. Se a autenticação passar a usar cookies, o CSRF deve ser reativado.
+- JWT e refresh token estão fora do escopo deste projeto.
+- Erros de autenticação e autorização retornam JSON padronizado com status 401 ou 403.
+- O hash de senha não é exposto em nenhum DTO de resposta.
+
+## Dados sensíveis e LGPD
+
+O sistema armazena dados pessoais e dados de saúde, como CPF, endereço, telefone, diagnóstico, prescrição e resultados de exames. Esses dados são classificados como dados pessoais sensíveis pela LGPD (Lei 13.709/2018) e exigem cuidado proporcional ao risco.
+
+Este é um projeto de estudo e portfólio. Ele não deve ser usado em produção real com dados de pacientes sem medidas adicionais de segurança, privacidade e conformidade.
+
+O que o projeto já faz:
+
+- Senhas armazenadas apenas como hash BCrypt.
+- Acesso por papéis (`ADMIN`, `MEDICO`, `RECEPCIONISTA`, `PACIENTE`), com autorização nos endpoints.
+- Respostas e DTOs sem senha ou hash.
+- Credenciais do banco e do ADMIN inicial vindas de variáveis de ambiente, fora do versionamento.
+- Schema versionado pelo Flyway e validado contra as entidades.
+
+O que falta para um uso real:
+
+- TLS/HTTPS obrigatório e criptografia em repouso no banco e nos backups.
+- Auditoria de acesso e de alterações em dados de saúde.
+- Base legal e registro de consentimento quando aplicável.
+- Política de retenção, descarte seguro e minimização de dados.
+- Controle de acesso mais granular, revisão periódica de permissões e resposta a incidentes.
+- Anonimização ou uso de dados sintéticos em ambientes de teste e demonstração.
+- Encarregado de proteção de dados (DPO) e processos de atendimento aos titulares.
+
+Nunca use dados reais de pacientes neste projeto.
+
+## Estrutura
+
+```text
+src/main/java/br/com/rodrigo/consultorio_medico_api/
+├── config/       # segurança, OpenAPI e ADMIN inicial
+├── controller/   # endpoints REST
+├── dto/          # requests e responses
+├── entity/       # entidades JPA e enum de papel
+├── exception/    # exceções e tratamento global
+├── mapper/       # MapStruct
+├── repository/   # Spring Data JPA
+└── service/      # regras de negócio e UserDetailsService
 ```
 
-### Rotas Públicas
-
-As seguintes rotas não requerem autenticação:
-
-- `POST /api/recepcionista/cadastro` - Cadastro de recepcionista
-
-### Como Logar
-
-1. **Registre um recepcionista** (sem autenticação):
-   ```bash
-   POST /api/recepcionista/cadastro
-   ```
-
-2. **Use as credenciais** (email e senha) para acessar outros endpoints
-
-3. **No Postman ou similar**, configure:
-   - Authorization → Type: Basic Auth
-   - Username: seu_email@example.com
-   - Password: sua_senha
-
----
-
-## 🌐 Endpoints da API
-
-### Base URL
-```
-http://localhost:8080
-```
-
-### Pacientes
-
-#### 1. Criar Paciente
-```http
-POST /api/paciente/cadastro
-Content-Type: application/json
-Authorization: Basic base64(email:senha)
-
-{
-  "nome": "João Silva",
-  "cpf": "123.456.789-00",
-  "telefone": "(11) 98765-4321",
-  "endereco": "Rua das Flores, 123",
-  "dataNascimento": "1990-05-15",
-  "genero": "MASCULINO",
-  "usuario": {
-    "email": "joao@example.com",
-    "senha": "senha123"
-  }
-}
-```
-
-**Resposta (201 Created):**
-```json
-{
-  "nome": "João Silva",
-  "dataNascimento": "1990-05-15",
-  "genero": "MASCULINO"
-}
-```
-
-#### 2. Atualizar Paciente
-```http
-PUT /api/paciente/atualizar/{id}
-Content-Type: application/json
-Authorization: Basic base64(email:senha)
-
-{
-  "nome": "João Silva Atualizado",
-  "cpf": "123.456.789-00",
-  "telefone": "(11) 98765-4322",
-  "endereco": "Rua das Flores, 456",
-  "dataNascimento": "1990-05-15",
-  "genero": "MASCULINO",
-  "usuario": {
-    "email": "joao@example.com",
-    "senha": "senha123"
-  }
-}
-```
-
-**Resposta (200 OK):**
-```json
-{
-  "nome": "João Silva Atualizado",
-  "dataNascimento": "1990-05-15",
-  "genero": "MASCULINO"
-}
-```
-
-#### 3. Buscar Paciente por CPF
-```http
-GET /api/paciente/busca/123.456.789-00
-Authorization: Basic base64(email:senha)
-```
-
-**Resposta (200 OK):**
-```json
-{
-  "nome": "João Silva",
-  "dataNascimento": "1990-05-15",
-  "genero": "MASCULINO"
-}
-```
-
-#### 4. Listar Todos os Pacientes
-```http
-GET /api/paciente/busca/all
-Authorization: Basic base64(email:senha)
-```
-
-**Resposta (200 OK):**
-```json
-[
-  {
-    "nome": "João Silva",
-    "dataNascimento": "1990-05-15",
-    "genero": "MASCULINO"
-  },
-  {
-    "nome": "Maria Santos",
-    "dataNascimento": "1985-08-22",
-    "genero": "FEMININO"
-  }
-]
-```
-
-#### 5. Excluir Paciente
-```http
-DELETE /api/paciente/delete/{id}
-Authorization: Basic base64(email:senha)
-```
-
-**Resposta (204 No Content)**
-
----
-
-### Médicos
-
-#### 1. Criar Médico
-```http
-POST /api/medicos/cadastro
-Content-Type: application/json
-Authorization: Basic base64(email:senha)
-
-{
-  "nome": "Dr. Carlos Mendes",
-  "telefone": "(11) 99999-8888",
-  "crm": "123456",
-  "especialidade": "CARDIOLOGIA",
-  "dataContratacao": "2023-01-15",
-  "status": true,
-  "usuario": {
-    "email": "carlos@example.com",
-    "senha": "senha123"
-  }
-}
-```
-
-**Resposta (201 Created):**
-```json
-{
-  "nome": "Dr. Carlos Mendes",
-  "crm": "123456",
-  "especialidade": "CARDIOLOGIA",
-  "dataContratacao": "2023-01-15",
-  "status": true
-}
-```
-
-#### 2. Atualizar Médico
-```http
-PUT /api/medicos/atualizar/{id}
-Content-Type: application/json
-Authorization: Basic base64(email:senha)
-
-{
-  "nome": "Dr. Carlos Mendes",
-  "telefone": "(11) 99999-8889",
-  "crm": "123456",
-  "especialidade": "CARDIOLOGIA",
-  "dataContratacao": "2023-01-15",
-  "status": true,
-  "usuario": {
-    "email": "carlos@example.com",
-    "senha": "senha123"
-  }
-}
-```
-
-**Resposta (200 OK):**
-```json
-{
-  "nome": "Dr. Carlos Mendes",
-  "crm": "123456",
-  "especialidade": "CARDIOLOGIA",
-  "dataContratacao": "2023-01-15",
-  "status": true
-}
-```
-
-#### 3. Buscar Médico por CRM
-```http
-GET /api/medicos/busca/crm/123456
-Authorization: Basic base64(email:senha)
-```
-
-**Resposta (200 OK):**
-```json
-{
-  "nome": "Dr. Carlos Mendes",
-  "crm": "123456",
-  "especialidade": "CARDIOLOGIA",
-  "dataContratacao": "2023-01-15",
-  "status": true
-}
-```
-
-#### 4. Buscar Médicos por Nome
-```http
-GET /api/medicos/busca/Carlos
-Authorization: Basic base64(email:senha)
-```
-
-**Resposta (200 OK):**
-```json
-[
-  {
-    "nome": "Dr. Carlos Mendes",
-    "crm": "123456",
-    "especialidade": "CARDIOLOGIA",
-    "dataContratacao": "2023-01-15",
-    "status": true
-  }
-]
-```
-
-#### 5. Listar Todos os Médicos
-```http
-GET /api/medicos/busca/all
-Authorization: Basic base64(email:senha)
-```
-
-**Resposta (200 OK):**
-```json
-[
-  {
-    "nome": "Dr. Carlos Mendes",
-    "crm": "123456",
-    "especialidade": "CARDIOLOGIA",
-    "dataContratacao": "2023-01-15",
-    "status": true
-  }
-]
-```
-
-#### 6. Excluir Médico
-```http
-DELETE /api/medicos/delete/{id}
-Authorization: Basic base64(email:senha)
-```
-
-**Resposta (204 No Content)**
-
-#### Especialidades Disponíveis
-```
-CARDIOLOGIA
-DERMATOLOGIA
-OFTALMOLOGIA
-ORTOPEDIA
-PEDIATRIA
-PSIQUIATRIA
-NEUROLOGIA
-GINECOLOGIA
-PNEUMOLOGIA
-GASTROENTEROLOGIA
-```
-
----
-
-### Recepcionistas
-
-#### 1. Cadastrar Recepcionista (Público)
-```http
-POST /api/recepcionista/cadastro
-Content-Type: application/json
-
-{
-  "cpf": "987.654.321-00",
-  "nome": "Ana Silva",
-  "telefone": "(11) 91234-5678",
-  "dataContratacao": "2023-06-01",
-  "status": true,
-  "usuario": {
-    "email": "ana@example.com",
-    "senha": "senha123"
-  }
-}
-```
-
-**Resposta (201 Created):**
-```json
-{
-  "nome": "Ana Silva",
-  "dataContratacao": "2023-06-01",
-  "status": true
-}
-```
-
-#### 2. Atualizar Recepcionista
-```http
-PUT /api/recepcionista/atualizar/{id}
-Content-Type: application/json
-Authorization: Basic base64(email:senha)
-
-{
-  "cpf": "987.654.321-00",
-  "nome": "Ana Silva",
-  "telefone": "(11) 91234-5679",
-  "dataContratacao": "2023-06-01",
-  "status": true,
-  "usuario": {
-    "email": "ana@example.com",
-    "senha": "senha123"
-  }
-}
-```
-
-**Resposta (200 OK):**
-```json
-{
-  "nome": "Ana Silva",
-  "dataContratacao": "2023-06-01",
-  "status": true
-}
-```
-
-#### 3. Buscar Recepcionista por CPF
-```http
-GET /api/recepcionista/busca/987.654.321-00
-Authorization: Basic base64(email:senha)
-```
-
-**Resposta (200 OK):**
-```json
-{
-  "nome": "Ana Silva",
-  "dataContratacao": "2023-06-01",
-  "status": true
-}
-```
-
-#### 4. Listar Todos os Recepcionistas
-```http
-GET /api/recepcionista/busca/all
-Authorization: Basic base64(email:senha)
-```
-
-**Resposta (200 OK):**
-```json
-[
-  {
-    "nome": "Ana Silva",
-    "dataContratacao": "2023-06-01",
-    "status": true
-  }
-]
-```
-
-#### 5. Excluir Recepcionista
-```http
-DELETE /api/recepcionista/delete/{id}
-Authorization: Basic base64(email:senha)
-```
-
-**Resposta (204 No Content)**
-
----
-
-### Consultas
-
-#### 1. Agendar Consulta
-```http
-POST /api/consulta/agendar
-Content-Type: application/json
-Authorization: Basic base64(email:senha)
-
-{
-  "pacienteId": "550e8400-e29b-41d4-a716-446655440000",
-  "medicoId": "550e8400-e29b-41d4-a716-446655440001",
-  "recepcionistaId": "550e8400-e29b-41d4-a716-446655440002",
-  "dataHora": "2024-09-15T10:30:00",
-  "observacoes": "Primeira consulta para avaliação"
-}
-```
-
-**Resposta (201 Created):**
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440003",
-  "pacienteNome": "João Silva",
-  "medicoNome": "Dr. Carlos Mendes",
-  "recepcionistaNome": "Ana Silva",
-  "dataHora": "2024-09-15T10:30:00",
-  "status": "AGENDADA",
-  "motivoCancelamento": null,
-  "observacoes": "Primeira consulta para avaliação"
-}
-```
-
-#### 2. Atualizar Status da Consulta
-```http
-PUT /api/consulta/status/{id}
-Content-Type: application/json
-Authorization: Basic base64(email:senha)
-
-"CONCLUIDA"
-```
-
-**Resposta (200 OK):**
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440003",
-  "pacienteNome": "João Silva",
-  "medicoNome": "Dr. Carlos Mendes",
-  "recepcionistaNome": "Ana Silva",
-  "dataHora": "2024-09-15T10:30:00",
-  "status": "CONCLUIDA",
-  "motivoCancelamento": null,
-  "observacoes": "Primeira consulta para avaliação"
-}
-```
-
-#### 3. Buscar Consultas por Paciente
-```http
-GET /api/consulta/paciente/{pacienteId}
-Authorization: Basic base64(email:senha)
-```
-
-**Resposta (200 OK):**
-```json
-[
-  {
-    "id": "550e8400-e29b-41d4-a716-446655440003",
-    "pacienteNome": "João Silva",
-    "medicoNome": "Dr. Carlos Mendes",
-    "recepcionistaNome": "Ana Silva",
-    "dataHora": "2024-09-15T10:30:00",
-    "status": "CONCLUIDA",
-    "motivoCancelamento": null,
-    "observacoes": "Primeira consulta para avaliação"
-  }
-]
-```
-
-#### Status Disponíveis
-```
-AGENDADA
-CONCLUIDA
-CANCELADA
-NAO_COMPARECEU
-```
-
----
-
-### Histórico Médico
-
-#### 1. Criar Histórico Médico
-```http
-POST /api/historico-medico/criar/{pacienteId}/{medicoId}/{consultaId}
-Content-Type: application/json
-Authorization: Basic base64(email:senha)
-
-{
-  "diagnostico": "Hipertensão arterial",
-  "prescricao": "Losartana 50mg - 1 comprimido ao dia",
-  "observacoes": "Paciente apresenta pressão elevada, recomendado acompanhamento mensal"
-}
-```
-
-**Resposta (201 Created):**
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440004",
-  "pacienteId": "550e8400-e29b-41d4-a716-446655440000",
-  "medicoId": "550e8400-e29b-41d4-a716-446655440001",
-  "consultaId": "550e8400-e29b-41d4-a716-446655440003",
-  "diagnostico": "Hipertensão arterial",
-  "prescricao": "Losartana 50mg - 1 comprimido ao dia",
-  "observacoes": "Paciente apresenta pressão elevada, recomendado acompanhamento mensal",
-  "dataCriacao": "2024-09-15T10:45:00"
-}
-```
-
-#### 2. Adicionar Exame ao Histórico Médico
-```http
-POST /api/historico-medico/adicionar-exame/{historicoMedicoId}
-Content-Type: application/json
-Authorization: Basic base64(email:senha)
-
-{
-  "tipoExame": "Eletrocardiograma",
-  "resultado": "Normal",
-  "dataExame": "2024-09-15T11:00:00",
-  "arquivoUrl": "https://storage.example.com/exames/ecg_123.pdf"
-}
-```
-
-**Resposta (201 Created):**
-```json
-{
-  "id": "550e8400-e29b-41d4-a716-446655440005",
-  "tipoExame": "Eletrocardiograma",
-  "resultado": "Normal",
-  "dataExame": "2024-09-15T11:00:00",
-  "arquivoUrl": "https://storage.example.com/exames/ecg_123.pdf"
-}
-```
-
----
-
-### Próximos Passos para Testes
-
-- [ ] Implementar testes para todos os Services
-- [ ] Adicionar testes para Controllers
-- [ ] Criar testes de integração
-- [ ] Configurar CI/CD para rodar testes automaticamente
-- [ ] Aumentar cobertura de testes para 80%+
-
----
-
-## 📌 Notas Importantes
-
-### 1. Segurança
-
-- ⚠️ **CSRF Desabilitado**: A configuração de segurança atualmente desabilita CSRF para simplificar o desenvolvimento. **Em produção**, isso deve ser adequadamente configurado.
-- 🔒 **Usar HTTPS**: Em produção, sempre use HTTPS.
-- 🔑 **Senhas**: As senhas são hashadas com BCrypt (BCryptPasswordEncoder).
-
-### 2. Banco de Dados
-
-- O Hibernate está configurado com `ddl-auto: update`, que atualiza automaticamente o schema.
-- Em produção, considere usar migrations com Liquibase ou Flyway.
-- SQL formatado é exibido nos logs (`show-sql: true`).
-
-### 3. Validação
-
-- Todos os DTOs utilizam `@Valid` e anotações de validação do Jakarta.
-- Campos obrigatórios são validados automaticamente.
-
-### 4. MapStruct
-
-- Utilizamos MapStruct para mapear DTOs ↔ Entities de forma type-safe.
-- Os mappers são gerados em tempo de compilação (zero overhead de runtime).
-
-### 5. Documentação da API
-
-Para gerar documentação Swagger/OpenAPI (a implementar):
-
-```xml
-<!-- Adicionar ao pom.xml -->
-<dependency>
-    <groupId>org.springdoc</groupId>
-    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-    <version>2.0.0</version>
-</dependency>
-```
-
-Depois acessar: `http://localhost:8080/swagger-ui.html`
-
----
-
-## 🚀 Roadmap
-
-- [x] Setup inicial do projeto
-- [x] Implementação de controladores básicos
-- [x] Configuração de segurança (HTTP Basic Auth)
-- [ ] Implementar todos os testes unitários com JUnit e Mockito
-- [ ] Adicionar autenticação JWT
-- [ ] Gerar documentação Swagger/OpenAPI
-- [ ] Configurar CI/CD (GitHub Actions)
-- [ ] Deploy em produção (Docker + Kubernetes)
-- [ ] Implementar cache
-
----
+Documentação detalhada da API: [docs/api.md](docs/api.md).

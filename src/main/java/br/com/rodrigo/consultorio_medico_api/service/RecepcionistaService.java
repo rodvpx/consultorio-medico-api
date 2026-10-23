@@ -2,14 +2,18 @@ package br.com.rodrigo.consultorio_medico_api.service;
 
 import br.com.rodrigo.consultorio_medico_api.dto.recepcionista.RecepcionistaRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.recepcionista.RecepcionistaResponse;
+import br.com.rodrigo.consultorio_medico_api.exception.ConflitoException;
+import br.com.rodrigo.consultorio_medico_api.exception.RecursoNaoEncontradoException;
 import br.com.rodrigo.consultorio_medico_api.mapper.RecepcionistaMapper;
 import br.com.rodrigo.consultorio_medico_api.entity.Recepcionista;
+import br.com.rodrigo.consultorio_medico_api.entity.Role;
 import br.com.rodrigo.consultorio_medico_api.entity.Usuario;
 import br.com.rodrigo.consultorio_medico_api.repository.RecepcionistaRepository;
 import br.com.rodrigo.consultorio_medico_api.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -31,22 +35,22 @@ public class RecepcionistaService {
     }
 
     // Criar recepcionista
+    @Transactional
     public RecepcionistaResponse save(RecepcionistaRequest input) {
-        // Verifica CPF e e-mail
-        if (verificarSeCpfExiste(input.cpf()) || verificarSeEmailJaCadastrado(input.usuario().email())) {
-            System.out.println("ERROR: CPF ou email já cadastrados");
-            return null;
+        if (verificarSeCpfExiste(input.cpf())) {
+            throw new ConflitoException("Já existe um recepcionista cadastrado com o CPF informado.");
+        }
+        if (verificarSeEmailJaCadastrado(input.usuario().email())) {
+            throw new ConflitoException("Já existe um usuário cadastrado com o e-mail informado.");
         }
 
-        // Cria e salva o usuário
         Usuario usuario = new Usuario();
         usuario.setEmail(input.usuario().email());
         usuario.setSenha(passwordEncoder.encode(input.usuario().senha()));
-        usuario.setRole("ROLE_RECEPCIONISTA");
+        usuario.setRole(Role.RECEPCIONISTA);
 
         usuarioRepository.save(usuario);
 
-        // Cria e salva o recepcionista
         Recepcionista recepcionista = recepcionistaMapper.toEntity(input);
         recepcionista.setUsuario(usuario);
 
@@ -54,9 +58,14 @@ public class RecepcionistaService {
     }
 
     // Atualizar recepcionista
+    @Transactional
     public RecepcionistaResponse update(UUID id, RecepcionistaRequest input) {
         Recepcionista existente = recepcionistaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Recepcionista não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Recepcionista não encontrado."));
+
+        if (!existente.getCpf().equals(input.cpf()) && verificarSeCpfExiste(input.cpf())) {
+            throw new ConflitoException("Já existe um recepcionista cadastrado com o CPF informado.");
+        }
 
         existente.setNome(input.nome());
         existente.setCpf(input.cpf());
@@ -67,20 +76,23 @@ public class RecepcionistaService {
         return recepcionistaMapper.toOutput(recepcionistaRepository.save(existente));
     }
 
+    @Transactional(readOnly = true)
     public RecepcionistaResponse findByCpf(String cpf) {
         Recepcionista recepcionista = recepcionistaRepository.findByCpf(cpf)
-                .orElseThrow(() -> new RuntimeException("Recepcionista com CPF '" + cpf + "' não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Recepcionista com CPF '" + cpf + "' não encontrado."));
 
         return recepcionistaMapper.toOutput(recepcionista);
     }
 
+    @Transactional(readOnly = true)
     public List<RecepcionistaResponse> findAll() {
         return recepcionistaMapper.toOutputList(recepcionistaRepository.findAll());
     }
 
+    @Transactional
     public void excluirRecepcionista(UUID id) {
         Recepcionista recepcionista = recepcionistaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Recepcionista não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Recepcionista não encontrado."));
 
         usuarioRepository.delete(recepcionista.getUsuario());
         recepcionistaRepository.delete(recepcionista);

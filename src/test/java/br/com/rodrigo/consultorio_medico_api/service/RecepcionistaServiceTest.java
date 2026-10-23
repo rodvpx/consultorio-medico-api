@@ -1,10 +1,16 @@
 package br.com.rodrigo.consultorio_medico_api.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
+import br.com.rodrigo.consultorio_medico_api.entity.Role;
+import br.com.rodrigo.consultorio_medico_api.exception.ConflitoException;
+import br.com.rodrigo.consultorio_medico_api.exception.RecursoNaoEncontradoException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -28,7 +34,7 @@ import br.com.rodrigo.consultorio_medico_api.repository.RecepcionistaRepository;
 import br.com.rodrigo.consultorio_medico_api.repository.UsuarioRepository;
 
 @ExtendWith(MockitoExtension.class)
-public class RecepcionistaServiceTest {
+class RecepcionistaServiceTest {
 
     @Mock
     private RecepcionistaRepository recepcionistaRepository;
@@ -46,126 +52,215 @@ public class RecepcionistaServiceTest {
     private RecepcionistaService service;
 
     @Test
-    void shouldReturnNullWhenCpfAlreadyExists() {
+    void deveLancarConflitoQuandoCpfJaExiste() {
+        // given
+        RecepcionistaRequest input = criarRequest();
 
-        // Arrange - preparar o cenário criando os dados reais para os testes.
-        UsuarioRequest usuario = new UsuarioRequest("teste@email.com", "123456");
-
-        RecepcionistaRequest input = new RecepcionistaRequest(
-                "12345678901",
-                "Nome Teste",
-                "(12) 34567-8901",
-                LocalDate.now(),
-                true,
-                usuario);
-
-        // Aqui configuramos o mock, para simular o estado do cpf: true = existe, false
-        // = não existe
         when(recepcionistaRepository.existsByCpf(input.cpf())).thenReturn(true);
 
-        // Act - executar o comportamento, a ação que estamos testando (no caso estamos
-        // testando o metodo save do service)
-        // dessa forma o resultado da ação real executada no nosso service
-        // (service.save)
-        // lá retorna um resultado, esse é armazenado na nossa variavel result
-        RecepcionistaResponse result = service.save(input);
+        // when / then
+        ConflitoException ex = assertThrows(ConflitoException.class, () -> service.save(input));
+        assertEquals("Já existe um recepcionista cadastrado com o CPF informado.", ex.getMessage());
 
-        // Assert - verificar o resultado, o método (service.save) produziu o resultado
-        // esperado?
-        // no nosso caso aqui, configuramos o mock com true, ou seja o CPF já existe
-        // nisso o resultado esperado é null (de acordo com nosso metodo service.save
-        // foi configurado)
-        // dependendo do resultado esperado mudamos o metodo assert (Null, Equals,
-        // NotNull, True, False, Throws...)
-        assertNull(result);
-
-        // Verify - verificar interações
-        // Aqui verificamos se as dependências foram chamadas como deveriam.
-        // Como o CPF já existe, o Service deve retornar antes de realizar os saves.
-        // Portanto, nenhum Usuario deve ser salvo e nenhuma Recepcionista deve ser
-        // salva.
+        verify(usuarioRepository, never()).existsByEmail(any());
         verify(usuarioRepository, never()).save(any(Usuario.class));
         verify(recepcionistaRepository, never()).save(any(Recepcionista.class));
-
     }
 
     @Test
-    void shouldReturnNullWhenEmailAlreadyExists() {
-
-        UsuarioRequest usuario = new UsuarioRequest("teste@emai.com", "123456");
-
-        RecepcionistaRequest input = new RecepcionistaRequest(
-                "12345678901",
-                "Nome Teste",
-                "(12) 34567-8901",
-                LocalDate.now(),
-                true,
-                usuario);
+    void deveLancarConflitoQuandoEmailJaExiste() {
+        // given
+        RecepcionistaRequest input = criarRequest();
 
         when(recepcionistaRepository.existsByCpf(input.cpf())).thenReturn(false);
-
         when(usuarioRepository.existsByEmail(input.usuario().email())).thenReturn(true);
 
-        RecepcionistaResponse result = service.save(input);
-
-        assertNull(result);
+        // when / then
+        ConflitoException ex = assertThrows(ConflitoException.class, () -> service.save(input));
+        assertEquals("Já existe um usuário cadastrado com o e-mail informado.", ex.getMessage());
 
         verify(usuarioRepository, never()).save(any(Usuario.class));
         verify(recepcionistaRepository, never()).save(any(Recepcionista.class));
     }
 
     @Test
-    void shouldSaveRecepcionistaSuccessfully() {
-
-        UsuarioRequest usuario = new UsuarioRequest("teste@emai.com", "123456");
-
-        RecepcionistaRequest input = new RecepcionistaRequest(
-                "12345678901",
-                "Nome Teste",
-                "(12) 34567-8901",
-                LocalDate.now(),
-                true,
-                usuario);
-
+    void deveSalvarRecepcionistaComSenhaCriptografadaEPapelRecepcionista() {
+        // given
+        RecepcionistaRequest input = criarRequest();
         Recepcionista recepcionista = new Recepcionista();
-
-        RecepcionistaResponse response = new RecepcionistaResponse(
-                "Nome Teste",
-                LocalDate.now(),
-                true);
+        RecepcionistaResponse response = new RecepcionistaResponse(java.util.UUID.randomUUID(), "Nome Teste",
+                "12345678901", LocalDate.now(), true);
 
         when(recepcionistaRepository.existsByCpf(input.cpf())).thenReturn(false);
         when(usuarioRepository.existsByEmail(input.usuario().email())).thenReturn(false);
-
-        var encryptedPassword = "senha-criptografada";
-        when(passwordEncoder.encode(input.usuario().senha())).thenReturn(encryptedPassword);
-
+        when(passwordEncoder.encode(input.usuario().senha())).thenReturn("senha-criptografada");
         when(recepcionistaMapper.toEntity(input)).thenReturn(recepcionista);
         when(recepcionistaRepository.save(recepcionista)).thenReturn(recepcionista);
         when(recepcionistaMapper.toOutput(recepcionista)).thenReturn(response);
 
-        RecepcionistaResponse result = service.save(input);
+        // when
+        RecepcionistaResponse resultado = service.save(input);
 
-        assertEquals(response, result);
+        // then
+        assertEquals(response, resultado);
 
         ArgumentCaptor<Usuario> usuarioCaptor = ArgumentCaptor.forClass(Usuario.class);
-
         verify(usuarioRepository).save(usuarioCaptor.capture());
 
         Usuario usuarioCapturado = usuarioCaptor.getValue();
-
         assertEquals(input.usuario().email(), usuarioCapturado.getEmail());
-        assertEquals(encryptedPassword, usuarioCapturado.getSenha());
-        assertEquals("ROLE_RECEPCIONISTA", usuarioCapturado.getRole());
+        assertEquals("senha-criptografada", usuarioCapturado.getSenha());
+        assertEquals(Role.RECEPCIONISTA, usuarioCapturado.getRole());
 
         ArgumentCaptor<Recepcionista> recepcionistaCaptor = ArgumentCaptor.forClass(Recepcionista.class);
-
         verify(recepcionistaRepository).save(recepcionistaCaptor.capture());
-
-        Recepcionista recepcionistaCapturado = recepcionistaCaptor.getValue();
-
-        assertEquals(usuarioCapturado, recepcionistaCapturado.getUsuario());
-
+        assertEquals(usuarioCapturado, recepcionistaCaptor.getValue().getUsuario());
     }
 
+    @Test
+    void deveAtualizarRecepcionistaExistente() {
+        // given
+        UUID id = UUID.randomUUID();
+        RecepcionistaRequest input = criarRequest();
+        Recepcionista existente = new Recepcionista();
+        existente.setId(id);
+        existente.setCpf(input.cpf());
+        RecepcionistaResponse response = new RecepcionistaResponse(id, input.nome(), input.cpf(),
+                input.dataContratacao(), input.status());
+
+        when(recepcionistaRepository.findById(id)).thenReturn(Optional.of(existente));
+        when(recepcionistaRepository.save(existente)).thenReturn(existente);
+        when(recepcionistaMapper.toOutput(existente)).thenReturn(response);
+
+        // when
+        RecepcionistaResponse resultado = service.update(id, input);
+
+        // then
+        assertEquals(response, resultado);
+        assertEquals("Nome Teste", existente.getNome());
+        assertEquals("12345678901", existente.getCpf());
+        assertEquals("(12) 34567-8901", existente.getTelefone());
+        assertEquals(input.dataContratacao(), existente.getDataContratacao());
+        assertEquals(input.status(), existente.isStatus());
+        verify(recepcionistaRepository, never()).existsByCpf(any());
+        verify(recepcionistaRepository).save(existente);
+    }
+
+    @Test
+    void deveLancarConflitoAoAtualizarRecepcionistaComCpfDeOutro() {
+        // given
+        UUID id = UUID.randomUUID();
+        RecepcionistaRequest input = criarRequest();
+        Recepcionista existente = new Recepcionista();
+        existente.setCpf("99999999999");
+
+        when(recepcionistaRepository.findById(id)).thenReturn(Optional.of(existente));
+        when(recepcionistaRepository.existsByCpf(input.cpf())).thenReturn(true);
+
+        // when / then
+        ConflitoException ex = assertThrows(ConflitoException.class, () -> service.update(id, input));
+        assertEquals("Já existe um recepcionista cadastrado com o CPF informado.", ex.getMessage());
+        verify(recepcionistaRepository, never()).save(any(Recepcionista.class));
+    }
+
+    @Test
+    void deveLancarNaoEncontradoAoAtualizarRecepcionistaInexistente() {
+        // given
+        UUID id = UUID.randomUUID();
+        when(recepcionistaRepository.findById(id)).thenReturn(Optional.empty());
+
+        // when / then
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.update(id, criarRequest()));
+        assertEquals("Recepcionista não encontrado.", ex.getMessage());
+        verify(recepcionistaRepository, never()).save(any(Recepcionista.class));
+    }
+
+    @Test
+    void deveBuscarRecepcionistaPorCpfExistente() {
+        // given
+        Recepcionista recepcionista = new Recepcionista();
+        RecepcionistaResponse response = new RecepcionistaResponse(UUID.randomUUID(), "Ana",
+                "12345678901", LocalDate.now(), true);
+
+        when(recepcionistaRepository.findByCpf("12345678901")).thenReturn(Optional.of(recepcionista));
+        when(recepcionistaMapper.toOutput(recepcionista)).thenReturn(response);
+
+        // when
+        RecepcionistaResponse resultado = service.findByCpf("12345678901");
+
+        // then
+        assertEquals(response, resultado);
+    }
+
+    @Test
+    void deveLancarNaoEncontradoAoBuscarRecepcionistaPorCpfInexistente() {
+        // given
+        when(recepcionistaRepository.findByCpf("12345678901")).thenReturn(Optional.empty());
+
+        // when / then
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.findByCpf("12345678901"));
+        assertEquals("Recepcionista com CPF '12345678901' não encontrado.", ex.getMessage());
+    }
+
+    @Test
+    void deveListarTodosOsRecepcionistas() {
+        // given
+        Recepcionista recepcionista = new Recepcionista();
+        RecepcionistaResponse response = new RecepcionistaResponse(UUID.randomUUID(), "Ana",
+                "12345678901", LocalDate.now(), true);
+
+        when(recepcionistaRepository.findAll()).thenReturn(List.of(recepcionista));
+        when(recepcionistaMapper.toOutputList(List.of(recepcionista))).thenReturn(List.of(response));
+
+        // when
+        List<RecepcionistaResponse> resultado = service.findAll();
+
+        // then
+        assertEquals(List.of(response), resultado);
+    }
+
+    @Test
+    void deveExcluirRecepcionistaEUsuarioAssociado() {
+        // given
+        UUID id = UUID.randomUUID();
+        Usuario usuario = new Usuario();
+        Recepcionista recepcionista = new Recepcionista();
+        recepcionista.setUsuario(usuario);
+
+        when(recepcionistaRepository.findById(id)).thenReturn(Optional.of(recepcionista));
+
+        // when
+        service.excluirRecepcionista(id);
+
+        // then
+        verify(usuarioRepository).delete(usuario);
+        verify(recepcionistaRepository).delete(recepcionista);
+    }
+
+    @Test
+    void deveLancarNaoEncontradoAoExcluirRecepcionistaInexistente() {
+        // given
+        UUID id = UUID.randomUUID();
+        when(recepcionistaRepository.findById(id)).thenReturn(Optional.empty());
+
+        // when / then
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.excluirRecepcionista(id));
+        assertEquals("Recepcionista não encontrado.", ex.getMessage());
+        verify(usuarioRepository, never()).delete(any(Usuario.class));
+        verify(recepcionistaRepository, never()).delete(any(Recepcionista.class));
+    }
+
+    private RecepcionistaRequest criarRequest() {
+        UsuarioRequest usuario = new UsuarioRequest("teste@email.com", "123456");
+        return new RecepcionistaRequest(
+                "12345678901",
+                "Nome Teste",
+                "(12) 34567-8901",
+                LocalDate.now(),
+                true,
+                usuario);
+    }
 }
