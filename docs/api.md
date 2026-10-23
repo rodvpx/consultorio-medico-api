@@ -75,7 +75,7 @@ O corpo é o mesmo do cadastro. O e-mail e a senha do usuário não são alterad
 
 ### Cadastrar
 
-`POST /medicos/cadastro` (ADMIN)
+`POST /medico/cadastro` (ADMIN)
 
 ```json
 {
@@ -109,17 +109,17 @@ Especialidades: `CARDIOLOGIA`, `PEDIATRIA`, `ORTOPEDIA`, `GINECOLOGIA`, `DERMATO
 
 ### Atualizar
 
-`PUT /medicos/atualizar/{id}` (ADMIN). O corpo é o mesmo do cadastro.
+`PUT /medico/atualizar/{id}` (ADMIN). O corpo é o mesmo do cadastro.
 
 ### Buscar e listar
 
-- `GET /medicos/busca/{nome}` (qualquer autenticado)
-- `GET /medicos/busca/crm/{crm}` (qualquer autenticado)
-- `GET /medicos/busca/all` (qualquer autenticado)
+- `GET /medico/busca/{nome}` (qualquer autenticado)
+- `GET /medico/busca/crm/{crm}` (qualquer autenticado)
+- `GET /medico/busca/all` (qualquer autenticado)
 
 ### Excluir
 
-`DELETE /medicos/delete/{id}` (ADMIN). Resposta `204`.
+`DELETE /medico/delete/{id}` (ADMIN). Resposta `204`.
 
 ## Pacientes
 

@@ -86,10 +86,10 @@ Papéis:
 | Recepcionista | `PUT /recepcionista/atualizar/{id}` | ADMIN |
 | Recepcionista | `GET /recepcionista/busca/{cpf}` e `/busca/all` | ADMIN |
 | Recepcionista | `DELETE /recepcionista/delete/{id}` | ADMIN |
-| Médico | `POST /medicos/cadastro` | ADMIN |
-| Médico | `PUT /medicos/atualizar/{id}` | ADMIN |
-| Médico | `DELETE /medicos/delete/{id}` | ADMIN |
-| Médico | `GET /medicos/busca/{nome}`, `/busca/crm/{crm}`, `/busca/all` | Qualquer usuário autenticado |
+| Médico | `POST /medico/cadastro` | ADMIN |
+| Médico | `PUT /medico/atualizar/{id}` | ADMIN |
+| Médico | `DELETE /medico/delete/{id}` | ADMIN |
+| Médico | `GET /medico/busca/{nome}`, `/busca/crm/{crm}`, `/busca/all` | Qualquer usuário autenticado |
 | Paciente | `POST /paciente/cadastro` | ADMIN, RECEPCIONISTA |
 | Paciente | `PUT /paciente/atualizar/{id}` | ADMIN, RECEPCIONISTA |
 | Paciente | `GET /paciente/busca/{cpf}` e `/busca/all` | ADMIN, RECEPCIONISTA |
@@ -112,12 +112,12 @@ As rotas de Swagger (`/swagger-ui/**` e `/v3/api-docs/**`) são públicas. Todas
 | GET | `/recepcionista/busca/{cpf}` | Busca recepcionista por CPF |
 | GET | `/recepcionista/busca/all` | Lista recepcionistas |
 | DELETE | `/recepcionista/delete/{id}` | Exclui recepcionista |
-| POST | `/medicos/cadastro` | Cadastra médico |
-| PUT | `/medicos/atualizar/{id}` | Atualiza médico |
-| GET | `/medicos/busca/{nome}` | Busca médicos por nome |
-| GET | `/medicos/busca/crm/{crm}` | Busca médico por CRM |
-| GET | `/medicos/busca/all` | Lista médicos |
-| DELETE | `/medicos/delete/{id}` | Exclui médico |
+| POST | `/medico/cadastro` | Cadastra médico |
+| PUT | `/medico/atualizar/{id}` | Atualiza médico |
+| GET | `/medico/busca/{nome}` | Busca médicos por nome |
+| GET | `/medico/busca/crm/{crm}` | Busca médico por CRM |
+| GET | `/medico/busca/all` | Lista médicos |
+| DELETE | `/medico/delete/{id}` | Exclui médico |
 | POST | `/paciente/cadastro` | Cadastra paciente |
 | PUT | `/paciente/atualizar/{id}` | Atualiza paciente |
 | GET | `/paciente/busca/{cpf}` | Busca paciente por CPF |
@@ -155,7 +155,7 @@ PAC_ID=$(echo "$PAC" | jq -r '.id')
 # 3. Cadastra um médico como ADMIN
 MED=$(curl -s -u "$ADMIN" -H 'Content-Type: application/json' \
   -d '{"nome":"Dr. Carlos","telefone":"(11) 91234-5678","crm":"123456","especialidade":"CARDIOLOGIA","dataContratacao":"2023-01-01","status":true,"usuario":{"email":"carlos@consultorio.local","senha":"123456"}}' \
-  "$BASE/medicos/cadastro")
+  "$BASE/medico/cadastro")
 MED_ID=$(echo "$MED" | jq -r '.id')
 
 # 4. Agenda uma consulta como recepcionista
@@ -176,7 +176,7 @@ Os testes usam H2 em memória no perfil `test`, com Flyway desabilitado. Nenhum 
 
 ## Banco de dados e migrations
 
-O schema é versionado pelo Flyway em `src/main/resources/db/migration`. O Hibernate está em `ddl-auto: validate`, então a aplicação não altera o schema sozinha. Em bancos criados antes do Flyway, `baseline-on-migrate` evita erro na primeira execução. Se o schema local estiver divergente, recrie o volume com `docker compose down -v`.
+O schema é versionado pelo Flyway em `src/main/resources/db/migration`. O Hibernate está em `ddl-auto: validate`, então a aplicação não altera o schema sozinha. O projeto é novo e não usa baseline: se o banco já tiver tabelas sem o histórico do Flyway, a inicialização falha de forma explícita em vez de pular a V1. Se o schema local estiver divergente, recrie o volume com `docker compose down -v`.
 
 ## Segurança
 
