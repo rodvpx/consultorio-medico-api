@@ -162,8 +162,8 @@ Gêneros: `MASCULINO`, `FEMININO`, `OUTROS`.
 
 ### Buscar e listar
 
-- `GET /paciente/busca/{cpf}` (ADMIN ou RECEPCIONISTA)
-- `GET /paciente/busca/all` (ADMIN ou RECEPCIONISTA)
+- `GET /paciente/busca/{cpf}` (ADMIN, RECEPCIONISTA ou MEDICO)
+- `GET /paciente/busca/all` (ADMIN, RECEPCIONISTA ou MEDICO)
 
 ### Excluir
 
@@ -243,6 +243,34 @@ Resposta `201`:
   "observacoes": "Acompanhamento mensal",
   "dataRegistro": "2026-12-01T10:45:00"
 }
+```
+
+### Buscar por paciente
+
+`GET /historico-medico/paciente/{pacienteId}` (MEDICO ou ADMIN). Retorna a lista de históricos do paciente, cada um com seus exames. Responde `404` se o paciente não existir.
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440004",
+    "pacienteNome": "João Silva",
+    "medicoNome": "Dr. Carlos Mendes",
+    "consultaStatus": "REALIZADA",
+    "diagnostico": "Hipertensão arterial",
+    "prescricao": "Losartana 50mg, 1 comprimido ao dia",
+    "observacoes": "Acompanhamento mensal",
+    "dataRegistro": "2026-12-01T10:45:00",
+    "exames": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440005",
+        "tipoExame": "Eletrocardiograma",
+        "resultado": "Normal",
+        "dataExame": "2026-12-01T11:00:00",
+        "arquivoUrl": "https://storage.example.com/exames/ecg_123.pdf"
+      }
+    ]
+  }
+]
 ```
 
 ### Adicionar exame ao histórico

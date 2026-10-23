@@ -92,12 +92,13 @@ Papéis:
 | Médico | `GET /medico/busca/{nome}`, `/busca/crm/{crm}`, `/busca/all` | Qualquer usuário autenticado |
 | Paciente | `POST /paciente/cadastro` | ADMIN, RECEPCIONISTA |
 | Paciente | `PUT /paciente/atualizar/{id}` | ADMIN, RECEPCIONISTA |
-| Paciente | `GET /paciente/busca/{cpf}` e `/busca/all` | ADMIN, RECEPCIONISTA |
+| Paciente | `GET /paciente/busca/{cpf}` e `/busca/all` | ADMIN, RECEPCIONISTA, MEDICO |
 | Paciente | `DELETE /paciente/delete/{id}` | ADMIN |
 | Consulta | `POST /consulta/agendar` | ADMIN, RECEPCIONISTA |
 | Consulta | `PUT /consulta/status/{id}` | ADMIN, RECEPCIONISTA |
 | Consulta | `GET /consulta/paciente/{pacienteId}` | ADMIN, RECEPCIONISTA, MEDICO |
 | Histórico | `POST /historico-medico/criar/{pacienteId}/{medicoId}/{consultaId}` | MEDICO, ADMIN |
+| Histórico | `GET /historico-medico/paciente/{pacienteId}` | MEDICO, ADMIN |
 | Histórico | `POST /historico-medico/adicionar-exame/{historicoMedicoId}` | MEDICO, ADMIN |
 | Exame | `POST /exame-medico/adicionar/{historicoMedicoId}` | MEDICO, ADMIN |
 
@@ -127,6 +128,7 @@ As rotas de Swagger (`/swagger-ui/**` e `/v3/api-docs/**`) são públicas. Todas
 | PUT | `/consulta/status/{id}` | Altera status da consulta |
 | GET | `/consulta/paciente/{pacienteId}` | Lista consultas do paciente |
 | POST | `/historico-medico/criar/{pacienteId}/{medicoId}/{consultaId}` | Cria histórico |
+| GET | `/historico-medico/paciente/{pacienteId}` | Lista históricos do paciente com exames |
 | POST | `/historico-medico/adicionar-exame/{historicoMedicoId}` | Adiciona exame ao histórico |
 | POST | `/exame-medico/adicionar/{historicoMedicoId}` | Adiciona exame ao histórico |
 
