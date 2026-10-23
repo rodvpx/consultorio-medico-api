@@ -54,8 +54,8 @@ class MedicoServiceTest {
         // given
         MedicoRequest input = criarRequest();
         Medico medico = new Medico();
-        MedicoResponse response = new MedicoResponse("Dr. Teste", "123456", Medico.Especialidade.CARDIOLOGIA,
-                LocalDate.of(2023, 1, 1), true);
+        MedicoResponse response = new MedicoResponse(UUID.randomUUID(), "Dr. Teste", "123456",
+                Medico.Especialidade.CARDIOLOGIA, LocalDate.of(2023, 1, 1), true);
 
         when(medicoRepository.existsByCrm(input.crm())).thenReturn(false);
         when(usuarioRepository.existsByEmail(input.usuario().email())).thenReturn(false);

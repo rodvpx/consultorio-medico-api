@@ -53,7 +53,8 @@ class PacienteServiceTest {
         // given
         PacienteRequest input = criarRequest();
         Paciente paciente = new Paciente();
-        PacienteResponse response = new PacienteResponse("Nome Teste", LocalDate.of(1990, 1, 1), Paciente.Genero.MASCULINO);
+        PacienteResponse response = new PacienteResponse(UUID.randomUUID(), "Nome Teste", "12345678901",
+                LocalDate.of(1990, 1, 1), Paciente.Genero.MASCULINO);
 
         when(pacienteRepository.existsByCpf(input.cpf())).thenReturn(false);
         when(usuarioRepository.existsByEmail(input.usuario().email())).thenReturn(false);

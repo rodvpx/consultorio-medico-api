@@ -81,7 +81,8 @@ class RecepcionistaServiceTest {
         // given
         RecepcionistaRequest input = criarRequest();
         Recepcionista recepcionista = new Recepcionista();
-        RecepcionistaResponse response = new RecepcionistaResponse("Nome Teste", LocalDate.now(), true);
+        RecepcionistaResponse response = new RecepcionistaResponse(java.util.UUID.randomUUID(), "Nome Teste",
+                "12345678901", LocalDate.now(), true);
 
         when(recepcionistaRepository.existsByCpf(input.cpf())).thenReturn(false);
         when(usuarioRepository.existsByEmail(input.usuario().email())).thenReturn(false);

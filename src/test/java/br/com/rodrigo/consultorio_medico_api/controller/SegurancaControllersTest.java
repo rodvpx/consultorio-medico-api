@@ -89,7 +89,7 @@ class SegurancaControllersTest {
 
     @Test
     void devePermitirAdminCadastrarRecepcionista() throws Exception {
-        when(recepcionistaService.save(any())).thenReturn(new RecepcionistaResponse("Ana", LocalDate.of(2023, 1, 1), true));
+        when(recepcionistaService.save(any())).thenReturn(new RecepcionistaResponse(UUID.randomUUID(), "Ana", "98765432100", LocalDate.of(2023, 1, 1), true));
 
         mockMvc.perform(post("/recepcionista/cadastro")
                         .with(user("admin").roles("ADMIN"))
@@ -101,7 +101,7 @@ class SegurancaControllersTest {
 
     @Test
     void devePermitirRecepcionistaCadastrarPaciente() throws Exception {
-        when(pacienteService.save(any())).thenReturn(new PacienteResponse("João", LocalDate.of(1990, 1, 1), Paciente.Genero.MASCULINO));
+        when(pacienteService.save(any())).thenReturn(new PacienteResponse(UUID.randomUUID(), "João", "12345678901", LocalDate.of(1990, 1, 1), Paciente.Genero.MASCULINO));
 
         mockMvc.perform(post("/paciente/cadastro")
                         .with(user("recepcao").roles("RECEPCIONISTA"))
@@ -121,7 +121,7 @@ class SegurancaControllersTest {
 
     @Test
     void devePermitirAdminCadastrarMedico() throws Exception {
-        when(medicoService.save(any())).thenReturn(new MedicoResponse("Dr. Carlos", "123456",
+        when(medicoService.save(any())).thenReturn(new MedicoResponse(UUID.randomUUID(), "Dr. Carlos", "123456",
                 Medico.Especialidade.CARDIOLOGIA, LocalDate.of(2023, 1, 1), true));
 
         mockMvc.perform(post("/medicos/cadastro")
