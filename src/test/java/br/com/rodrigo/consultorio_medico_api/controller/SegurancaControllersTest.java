@@ -37,6 +37,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -295,6 +296,125 @@ class SegurancaControllersTest {
                                 {"tipoExame":"Hemograma","resultado":"Normal","dataExame":"2026-01-10T10:00:00"}
                                 """))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void devePermitirAdminAtualizarMedico() throws Exception {
+        when(medicoService.update(any(), any())).thenReturn(new MedicoResponse(UUID.randomUUID(), "Dr. Carlos",
+                "123456", Medico.Especialidade.CARDIOLOGIA, LocalDate.of(2023, 1, 1), true));
+
+        mockMvc.perform(put("/medico/atualizar/{id}", UUID.randomUUID())
+                        .with(user("admin").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonMedico()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void devePermitirUsuarioAutenticadoBuscarMedicosPorNome() throws Exception {
+        when(medicoService.findByNome("Carlos")).thenReturn(List.of());
+
+        mockMvc.perform(get("/medico/busca/{nome}", "Carlos")
+                        .with(user("paciente").roles("PACIENTE")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void devePermitirUsuarioAutenticadoBuscarMedicoPorCrm() throws Exception {
+        when(medicoService.findByCrm("123456")).thenReturn(new MedicoResponse(UUID.randomUUID(), "Dr. Carlos",
+                "123456", Medico.Especialidade.CARDIOLOGIA, LocalDate.of(2023, 1, 1), true));
+
+        mockMvc.perform(get("/medico/busca/crm/{crm}", "123456")
+                        .with(user("paciente").roles("PACIENTE")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void devePermitirAdminExcluirMedico() throws Exception {
+        doNothing().when(medicoService).excluirMedico(any());
+
+        mockMvc.perform(delete("/medico/delete/{id}", UUID.randomUUID())
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void devePermitirAdminAtualizarRecepcionista() throws Exception {
+        when(recepcionistaService.update(any(), any())).thenReturn(new RecepcionistaResponse(UUID.randomUUID(),
+                "Ana", "98765432100", LocalDate.of(2023, 1, 1), true));
+
+        mockMvc.perform(put("/recepcionista/atualizar/{id}", UUID.randomUUID())
+                        .with(user("admin").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonRecepcionista()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void devePermitirAdminBuscarRecepcionistaPorCpf() throws Exception {
+        when(recepcionistaService.findByCpf("98765432100")).thenReturn(new RecepcionistaResponse(UUID.randomUUID(),
+                "Ana", "98765432100", LocalDate.of(2023, 1, 1), true));
+
+        mockMvc.perform(get("/recepcionista/busca/{cpf}", "98765432100")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void devePermitirAdminListarRecepcionistas() throws Exception {
+        when(recepcionistaService.findAll()).thenReturn(List.of());
+
+        mockMvc.perform(get("/recepcionista/busca/all")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void devePermitirAdminExcluirRecepcionista() throws Exception {
+        doNothing().when(recepcionistaService).excluirRecepcionista(any());
+
+        mockMvc.perform(delete("/recepcionista/delete/{id}", UUID.randomUUID())
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void devePermitirRecepcionistaAtualizarPaciente() throws Exception {
+        when(pacienteService.update(any(), any())).thenReturn(new PacienteResponse(UUID.randomUUID(), "João",
+                "12345678901", LocalDate.of(1990, 1, 1), Paciente.Genero.MASCULINO));
+
+        mockMvc.perform(put("/paciente/atualizar/{id}", UUID.randomUUID())
+                        .with(user("recepcao").roles("RECEPCIONISTA"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonPaciente()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void devePermitirRecepcionistaAtualizarStatusDaConsulta() throws Exception {
+        when(consultaService.atualizarStatus(any(), any())).thenReturn(new ConsultaResponse(UUID.randomUUID(),
+                "João", "Dr. Carlos", "Ana", LocalDateTime.now().plusDays(1), "CANCELADA", null, null));
+
+        mockMvc.perform(put("/consulta/status/{id}", UUID.randomUUID())
+                        .with(user("recepcao").roles("RECEPCIONISTA"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("\"CANCELADA\""))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void devePermitirMedicoAdicionarExameViaHistorico() throws Exception {
+        when(historicoMedicoService.adicionarExame(any(), any()))
+                .thenReturn(new ExameMedicoResponse(UUID.randomUUID(), "Hemograma", "Normal",
+                        LocalDateTime.now(), null));
+
+        mockMvc.perform(post("/historico-medico/adicionar-exame/{id}", UUID.randomUUID())
+                        .with(user("medico").roles("MEDICO"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"tipoExame":"Hemograma","resultado":"Normal","dataExame":"2026-01-10T10:00:00"}
+                                """))
+                .andExpect(status().isCreated());
     }
 
     @Test
