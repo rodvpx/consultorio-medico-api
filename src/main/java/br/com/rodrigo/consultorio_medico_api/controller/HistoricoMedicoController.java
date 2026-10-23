@@ -5,6 +5,7 @@ import br.com.rodrigo.consultorio_medico_api.dto.exame_medico.ExameMedicoRespons
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoDetalhadoResponse;
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoResponse;
+import br.com.rodrigo.consultorio_medico_api.service.ExameMedicoService;
 import br.com.rodrigo.consultorio_medico_api.service.HistoricoMedicoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -26,10 +27,13 @@ import java.util.UUID;
 public class HistoricoMedicoController {
 
     private final HistoricoMedicoService historicoMedicoService;
+    private final ExameMedicoService exameMedicoService;
 
     @Autowired
-    public HistoricoMedicoController(HistoricoMedicoService historicoMedicoService) {
+    public HistoricoMedicoController(HistoricoMedicoService historicoMedicoService,
+                                     ExameMedicoService exameMedicoService) {
         this.historicoMedicoService = historicoMedicoService;
+        this.exameMedicoService = exameMedicoService;
     }
 
     @Operation(summary = "Cria um histórico médico")
@@ -61,7 +65,17 @@ public class HistoricoMedicoController {
                 .body(historicoMedicoService.buscarPorPaciente(pacienteId));
     }
 
-    @Operation(summary = "Adiciona um exame a um histórico médico")
+    /**
+     * Mantido por compatibilidade. O endpoint canônico é
+     * {@code POST /exame-medico/adicionar/{historicoMedicoId}} e ambos usam o
+     * mesmo método de {@link ExameMedicoService}.
+     */
+    @Deprecated
+    @Operation(
+            summary = "Adiciona um exame a um histórico médico (obsoleto)",
+            description = "Endpoint mantido por compatibilidade. Use POST /exame-medico/adicionar/{historicoMedicoId}.",
+            deprecated = true
+    )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Exame adicionado"),
             @ApiResponse(responseCode = "400", description = "Dados inválidos"),
@@ -71,7 +85,7 @@ public class HistoricoMedicoController {
     @PreAuthorize("hasAnyRole('MEDICO', 'ADMIN')")
     public ResponseEntity<ExameMedicoResponse> adicionarExame(@PathVariable UUID historicoMedicoId,
                                                             @Valid @RequestBody ExameMedicoRequest exameInput) {
-        ExameMedicoResponse exameMedicoOutput = historicoMedicoService.adicionarExame(historicoMedicoId, exameInput);
+        ExameMedicoResponse exameMedicoOutput = exameMedicoService.adicionarExame(historicoMedicoId, exameInput);
         return ResponseEntity.status(HttpStatus.CREATED).body(exameMedicoOutput);
     }
 }

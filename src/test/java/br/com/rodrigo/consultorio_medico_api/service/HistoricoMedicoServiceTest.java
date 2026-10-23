@@ -1,20 +1,16 @@
 package br.com.rodrigo.consultorio_medico_api.service;
 
-import br.com.rodrigo.consultorio_medico_api.dto.exame_medico.ExameMedicoRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.exame_medico.ExameMedicoResponse;
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoDetalhadoResponse;
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoRequest;
 import br.com.rodrigo.consultorio_medico_api.dto.historico_medico.HistoricoMedicoResponse;
 import br.com.rodrigo.consultorio_medico_api.entity.Consulta;
-import br.com.rodrigo.consultorio_medico_api.entity.ExameMedico;
 import br.com.rodrigo.consultorio_medico_api.entity.HistoricoMedico;
 import br.com.rodrigo.consultorio_medico_api.entity.Medico;
 import br.com.rodrigo.consultorio_medico_api.entity.Paciente;
 import br.com.rodrigo.consultorio_medico_api.exception.RecursoNaoEncontradoException;
-import br.com.rodrigo.consultorio_medico_api.mapper.ExameMedicoMapper;
 import br.com.rodrigo.consultorio_medico_api.mapper.HistoricoMedicoMapper;
 import br.com.rodrigo.consultorio_medico_api.repository.ConsultaRepository;
-import br.com.rodrigo.consultorio_medico_api.repository.ExameMedicoRepository;
 import br.com.rodrigo.consultorio_medico_api.repository.HistoricoMedicoRepository;
 import br.com.rodrigo.consultorio_medico_api.repository.MedicoRepository;
 import br.com.rodrigo.consultorio_medico_api.repository.PacienteRepository;
@@ -54,13 +50,7 @@ class HistoricoMedicoServiceTest {
     private ConsultaRepository consultaRepository;
 
     @Mock
-    private ExameMedicoRepository exameMedicoRepository;
-
-    @Mock
     private HistoricoMedicoMapper historicoMedicoMapper;
-
-    @Mock
-    private ExameMedicoMapper exameMedicoMapper;
 
     @InjectMocks
     private HistoricoMedicoService service;
@@ -192,37 +182,4 @@ class HistoricoMedicoServiceTest {
         verify(historicoMedicoRepository, never()).findByPaciente(any(Paciente.class));
     }
 
-    @Test
-    void deveAdicionarExameAoHistorico() {
-        // given
-        UUID historicoId = UUID.randomUUID();
-        ExameMedicoRequest input = new ExameMedicoRequest("Eletrocardiograma", "Normal",
-                LocalDateTime.now(), "https://exemplo.com/exame.pdf");
-        ExameMedico exame = new ExameMedico();
-        ExameMedicoResponse response = new ExameMedicoResponse(UUID.randomUUID(), "Eletrocardiograma", "Normal",
-                input.dataExame(), input.arquivoUrl());
-
-        when(historicoMedicoRepository.findById(historicoId)).thenReturn(Optional.of(new HistoricoMedico()));
-        when(exameMedicoRepository.save(any(ExameMedico.class))).thenReturn(exame);
-        when(exameMedicoMapper.toOutput(exame)).thenReturn(response);
-
-        // when
-        ExameMedicoResponse resultado = service.adicionarExame(historicoId, input);
-
-        // then
-        assertEquals(response, resultado);
-    }
-
-    @Test
-    void deveLancarNaoEncontradoQuandoHistoricoNaoExisteAoAdicionarExame() {
-        // given
-        UUID historicoId = UUID.randomUUID();
-        when(historicoMedicoRepository.findById(historicoId)).thenReturn(Optional.empty());
-
-        // when / then
-        assertThrows(RecursoNaoEncontradoException.class,
-                () -> service.adicionarExame(historicoId,
-                        new ExameMedicoRequest("Exame", "Resultado", LocalDateTime.now(), null)));
-        verify(exameMedicoRepository, never()).save(any(ExameMedico.class));
-    }
 }

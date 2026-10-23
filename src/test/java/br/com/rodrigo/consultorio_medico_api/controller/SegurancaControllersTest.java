@@ -556,7 +556,7 @@ class SegurancaControllersTest {
     @Test
     void devePermitirMedicoAdicionarExameViaHistorico() throws Exception {
         UUID historicoId = UUID.randomUUID();
-        when(historicoMedicoService.adicionarExame(any(), any()))
+        when(exameMedicoService.adicionarExame(any(), any()))
                 .thenReturn(new ExameMedicoResponse(UUID.randomUUID(), "Hemograma", "Normal",
                         LocalDateTime.of(2026, 1, 10, 10, 0), null));
 
@@ -570,8 +570,8 @@ class SegurancaControllersTest {
                 .andExpect(jsonPath("$.tipoExame").value("Hemograma"))
                 .andExpect(jsonPath("$.resultado").value("Normal"));
 
-        verify(historicoMedicoService).adicionarExame(eq(historicoId), any(ExameMedicoRequest.class));
-        verifyNoInteractions(exameMedicoService);
+        verify(exameMedicoService).adicionarExame(eq(historicoId), any(ExameMedicoRequest.class));
+        verifyNoInteractions(historicoMedicoService);
     }
 
     @Test
