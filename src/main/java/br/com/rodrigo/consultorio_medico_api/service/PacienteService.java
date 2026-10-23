@@ -13,6 +13,7 @@ import br.com.rodrigo.consultorio_medico_api.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +35,7 @@ public class PacienteService {
     }
 
     // Criar paciente
+    @Transactional
     public PacienteResponse save(PacienteRequest input) {
         if (verificarSeCpfExiste(input.cpf())) {
             throw new ConflitoException("Já existe um paciente cadastrado com o CPF informado.");
@@ -56,6 +58,7 @@ public class PacienteService {
     }
 
     // Atualizar paciente
+    @Transactional
     public PacienteResponse update(UUID id, PacienteRequest input) {
         Paciente pacienteExistente = pacienteRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Paciente não encontrado."));
@@ -75,6 +78,7 @@ public class PacienteService {
     }
 
     // Buscar paciente por CPF
+    @Transactional(readOnly = true)
     public PacienteResponse findByCpf(String cpf) {
         Paciente paciente = pacienteRepository.findByCpf(cpf)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Paciente com CPF '" + cpf + "' não encontrado."));
@@ -83,11 +87,13 @@ public class PacienteService {
     }
 
     // Buscar todos os pacientes
+    @Transactional(readOnly = true)
     public List<PacienteResponse> findAll() {
         return pacienteMapper.toOutputList(pacienteRepository.findAll());
     }
 
     // Excluir paciente
+    @Transactional
     public void excluirPaciente(UUID id) {
         Paciente paciente = pacienteRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Paciente não encontrado."));

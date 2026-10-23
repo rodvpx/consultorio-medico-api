@@ -41,6 +41,7 @@ public class HistoricoMedicoService {
     }
 
     // Criar histórico médico
+    @Transactional
     public HistoricoMedicoResponse criarHistorico(UUID pacienteId, UUID medicoId, UUID consultaId, HistoricoMedicoRequest input) {
         Paciente paciente = pacienteRepository.findById(pacienteId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Paciente não encontrado."));
@@ -71,6 +72,7 @@ public class HistoricoMedicoService {
     }
 
     // Adicionar exame médico ao histórico
+    @Transactional
     public ExameMedicoResponse adicionarExame(UUID historicoMedicoId, ExameMedicoRequest exameInput) {
         HistoricoMedico historicoMedico = historicoMedicoRepository.findById(historicoMedicoId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Histórico médico não encontrado."));

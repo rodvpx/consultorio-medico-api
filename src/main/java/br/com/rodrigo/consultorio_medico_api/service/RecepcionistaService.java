@@ -13,6 +13,7 @@ import br.com.rodrigo.consultorio_medico_api.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +35,7 @@ public class RecepcionistaService {
     }
 
     // Criar recepcionista
+    @Transactional
     public RecepcionistaResponse save(RecepcionistaRequest input) {
         if (verificarSeCpfExiste(input.cpf())) {
             throw new ConflitoException("Já existe um recepcionista cadastrado com o CPF informado.");
@@ -56,6 +58,7 @@ public class RecepcionistaService {
     }
 
     // Atualizar recepcionista
+    @Transactional
     public RecepcionistaResponse update(UUID id, RecepcionistaRequest input) {
         Recepcionista existente = recepcionistaRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Recepcionista não encontrado."));
@@ -73,6 +76,7 @@ public class RecepcionistaService {
         return recepcionistaMapper.toOutput(recepcionistaRepository.save(existente));
     }
 
+    @Transactional(readOnly = true)
     public RecepcionistaResponse findByCpf(String cpf) {
         Recepcionista recepcionista = recepcionistaRepository.findByCpf(cpf)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Recepcionista com CPF '" + cpf + "' não encontrado."));
@@ -80,10 +84,12 @@ public class RecepcionistaService {
         return recepcionistaMapper.toOutput(recepcionista);
     }
 
+    @Transactional(readOnly = true)
     public List<RecepcionistaResponse> findAll() {
         return recepcionistaMapper.toOutputList(recepcionistaRepository.findAll());
     }
 
+    @Transactional
     public void excluirRecepcionista(UUID id) {
         Recepcionista recepcionista = recepcionistaRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Recepcionista não encontrado."));

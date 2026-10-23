@@ -13,6 +13,7 @@ import br.com.rodrigo.consultorio_medico_api.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +35,7 @@ public class MedicoService {
     }
 
     // Criar médico
+    @Transactional
     public MedicoResponse save(MedicoRequest input) {
         if (verificarSeCrmExiste(input.crm())) {
             throw new ConflitoException("Já existe um médico cadastrado com o CRM informado.");
@@ -56,6 +58,7 @@ public class MedicoService {
     }
 
     // Atualizar médico
+    @Transactional
     public MedicoResponse update(UUID id, MedicoRequest input) {
         Medico medicoExistente = medicoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Médico não encontrado."));
@@ -74,6 +77,7 @@ public class MedicoService {
         return medicoMapper.toOutput(medicoRepository.save(medicoExistente));
     }
 
+    @Transactional(readOnly = true)
     public List<MedicoResponse> findByNome(String nome) {
         List<Medico> medicos = medicoRepository.findByNome(nome);
 
@@ -84,6 +88,7 @@ public class MedicoService {
         return medicoMapper.toOutputList(medicos);
     }
 
+    @Transactional(readOnly = true)
     public MedicoResponse findByCrm(String crm) {
         Medico medico = medicoRepository.findByCrm(crm)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Médico com CRM '" + crm + "' não encontrado."));
@@ -91,10 +96,12 @@ public class MedicoService {
         return medicoMapper.toOutput(medico);
     }
 
+    @Transactional(readOnly = true)
     public List<MedicoResponse> findAll() {
         return medicoMapper.toOutputList(medicoRepository.findAll());
     }
 
+    @Transactional
     public void excluirMedico(UUID id) {
         Medico medico = medicoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Médico não encontrado."));

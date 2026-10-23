@@ -15,6 +15,7 @@ import br.com.rodrigo.consultorio_medico_api.repository.PacienteRepository;
 import br.com.rodrigo.consultorio_medico_api.repository.RecepcionistaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -38,6 +39,7 @@ public class ConsultaService {
     }
 
     // Agendar uma consulta
+    @Transactional
     public ConsultaResponse agendarConsulta(ConsultaRequest consultaInput) {
         Paciente paciente = pacienteRepository.findById(consultaInput.pacienteId())
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Paciente não encontrado."));
@@ -59,6 +61,7 @@ public class ConsultaService {
     }
 
     // Atualizar status da consulta
+    @Transactional
     public ConsultaResponse atualizarStatus(UUID id, Consulta.StatusConsulta status) {
         if (status == null) {
             throw new RegraDeNegocioException("O status da consulta é obrigatório.");
@@ -72,6 +75,7 @@ public class ConsultaService {
     }
 
     // Buscar consultas de um paciente
+    @Transactional(readOnly = true)
     public List<ConsultaResponse> buscarConsultasPorPaciente(UUID pacienteId) {
         Paciente paciente = pacienteRepository.findById(pacienteId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Paciente não encontrado."));
