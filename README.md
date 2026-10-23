@@ -100,8 +100,8 @@ Papéis:
 | Consulta | `GET /consulta/paciente/{pacienteId}` | ADMIN, RECEPCIONISTA, MEDICO |
 | Histórico | `POST /historico-medico/criar/{pacienteId}/{medicoId}/{consultaId}` | MEDICO, ADMIN |
 | Histórico | `GET /historico-medico/paciente/{pacienteId}` | MEDICO, ADMIN |
-| Histórico | `POST /historico-medico/adicionar-exame/{historicoMedicoId}` | MEDICO, ADMIN |
-| Exame | `POST /exame-medico/adicionar/{historicoMedicoId}` | MEDICO, ADMIN |
+| Histórico | `POST /historico-medico/adicionar-exame/{historicoMedicoId}` (obsoleto) | MEDICO, ADMIN |
+| Exame | `POST /exame-medico/adicionar/{historicoMedicoId}` (canônico) | MEDICO, ADMIN |
 
 As rotas de Swagger (`/swagger-ui/**` e `/v3/api-docs/**`) são públicas. Todas as demais exigem autenticação.
 
@@ -130,8 +130,8 @@ As rotas de Swagger (`/swagger-ui/**` e `/v3/api-docs/**`) são públicas. Todas
 | GET | `/consulta/paciente/{pacienteId}` | Lista consultas do paciente |
 | POST | `/historico-medico/criar/{pacienteId}/{medicoId}/{consultaId}` | Cria histórico |
 | GET | `/historico-medico/paciente/{pacienteId}` | Lista históricos do paciente com exames |
-| POST | `/historico-medico/adicionar-exame/{historicoMedicoId}` | Adiciona exame ao histórico |
-| POST | `/exame-medico/adicionar/{historicoMedicoId}` | Adiciona exame ao histórico |
+| POST | `/historico-medico/adicionar-exame/{historicoMedicoId}` | Adiciona exame ao histórico (obsoleto, use a rota canônica abaixo) |
+| POST | `/exame-medico/adicionar/{historicoMedicoId}` | Adiciona exame ao histórico (rota canônica) |
 
 Exemplos de payloads, respostas, enums e formato de erro: [docs/api.md](docs/api.md).
 
@@ -185,11 +185,15 @@ O `verify` executa os testes unitários e de segurança com MockMvc, roda o `Fly
 
 Sem Docker, o `FlywayMigrationIT` é ignorado automaticamente (`@Testcontainers(disabledWithoutDocker = true)`) e o restante da suíte continua passando com H2. O CI do GitHub Actions roda em `ubuntu-latest`, que já tem Docker, então a validação real das migrations acontece a cada push e pull request.
 
-Na última execução desta versão, a cobertura foi de 98,1% de linhas e 90,3% de branches. O JaCoCo não impõe mínimo obrigatório no build, os números servem como referência do estado atual.
+Na última execução desta versão, a cobertura foi de 99,0% de linhas, 92,0% de branches e 99,2% de instruções (397 de 401 linhas, 46 de 50 branches e 2038 de 2054 instruções). Classes geradas pelo MapStruct, como `*MapperImpl`, ficam fora do relatório do JaCoCo. O JaCoCo não impõe mínimo obrigatório no build, os números servem como referência do estado atual.
 
 ## Banco de dados e migrations
 
 O schema é versionado pelo Flyway em `src/main/resources/db/migration`. O Hibernate está em `ddl-auto: validate`, então a aplicação não altera o schema sozinha. O projeto é novo e não usa baseline: se o banco já tiver tabelas sem o histórico do Flyway, a inicialização falha de forma explícita em vez de pular a V1. Se o schema local estiver divergente, recrie o volume com `docker compose down -v`.
+
+## Transações
+
+As operações de escrita que gravam mais de uma entidade rodam em uma única transação do Spring. É o caso de paciente, médico e recepcionista, que salvam o `Usuario` e depois a entidade de domínio: se a segunda gravação falhar, o `Usuario` é revertido e o e-mail não fica bloqueado. As validações de duplicidade de CPF, CRM e e-mail acontecem antes de qualquer gravação. Consulta, histórico médico e exame também usam transação nas escritas, e as leituras usam `@Transactional(readOnly = true)`.
 
 ## Segurança
 

@@ -273,9 +273,11 @@ Resposta `201`:
 ]
 ```
 
-### Adicionar exame ao histórico
+### Adicionar exame ao histórico (obsoleto)
 
 `POST /historico-medico/adicionar-exame/{historicoMedicoId}` (MEDICO ou ADMIN)
+
+Endpoint mantido por compatibilidade e marcado como obsoleto no Swagger. A rota canônica é `POST /exame-medico/adicionar/{historicoMedicoId}`. As duas rotas chamam o mesmo método do service e têm o mesmo corpo, a mesma resposta e as mesmas permissões.
 
 ```json
 {
@@ -302,7 +304,7 @@ Resposta `201`:
 
 `POST /exame-medico/adicionar/{historicoMedicoId}` (MEDICO ou ADMIN)
 
-O corpo e a resposta são os mesmos do endpoint de adicionar exame ao histórico.
+Esta é a rota canônica para adicionar exame a um histórico médico. O corpo e a resposta são os mesmos do endpoint obsoleto `/historico-medico/adicionar-exame/{historicoMedicoId}`. Não há lógica duplicada: os dois controllers delegam para `ExameMedicoService.adicionarExame`. Prefira esta rota em novas integrações e no Swagger.
 
 ## Validação
 
