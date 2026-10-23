@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -70,10 +71,16 @@ class MedicoServiceTest {
         // then
         assertEquals(response, resultado);
 
+        verify(passwordEncoder).encode("123456");
         ArgumentCaptor<Usuario> usuarioCaptor = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(usuarioCaptor.capture());
+        assertEquals("medico@email.com", usuarioCaptor.getValue().getEmail());
         assertEquals(Role.MEDICO, usuarioCaptor.getValue().getRole());
         assertEquals("senha-criptografada", usuarioCaptor.getValue().getSenha());
+
+        ArgumentCaptor<Medico> medicoCaptor = ArgumentCaptor.forClass(Medico.class);
+        verify(medicoRepository).save(medicoCaptor.capture());
+        assertEquals(usuarioCaptor.getValue(), medicoCaptor.getValue().getUsuario());
     }
 
     @Test
@@ -83,8 +90,11 @@ class MedicoServiceTest {
         when(medicoRepository.existsByCrm(input.crm())).thenReturn(true);
 
         // when / then
-        assertThrows(ConflitoException.class, () -> service.save(input));
+        ConflitoException ex = assertThrows(ConflitoException.class, () -> service.save(input));
+        assertEquals("Já existe um médico cadastrado com o CRM informado.", ex.getMessage());
+        verify(usuarioRepository, never()).existsByEmail(any());
         verify(usuarioRepository, never()).save(any(Usuario.class));
+        verify(medicoRepository, never()).save(any(Medico.class));
     }
 
     @Test
@@ -95,7 +105,10 @@ class MedicoServiceTest {
         when(usuarioRepository.existsByEmail(input.usuario().email())).thenReturn(true);
 
         // when / then
-        assertThrows(ConflitoException.class, () -> service.save(input));
+        ConflitoException ex = assertThrows(ConflitoException.class, () -> service.save(input));
+        assertEquals("Já existe um usuário cadastrado com o e-mail informado.", ex.getMessage());
+        verify(usuarioRepository, never()).save(any(Usuario.class));
+        verify(medicoRepository, never()).save(any(Medico.class));
     }
 
     @Test
@@ -119,7 +132,13 @@ class MedicoServiceTest {
         // then
         assertEquals(response, resultado);
         assertEquals("Dr. Teste", existente.getNome());
+        assertEquals("(11) 91234-5678", existente.getTelefone());
+        assertEquals("123456", existente.getCrm());
+        assertEquals(Medico.Especialidade.CARDIOLOGIA, existente.getEspecialidade());
+        assertEquals(LocalDate.of(2023, 1, 1), existente.getDataContratacao());
+        assertTrue(existente.getStatus());
         verify(medicoRepository, never()).existsByCrm(any());
+        verify(medicoRepository).save(existente);
     }
 
     @Test
@@ -134,7 +153,8 @@ class MedicoServiceTest {
         when(medicoRepository.existsByCrm(input.crm())).thenReturn(true);
 
         // when / then
-        assertThrows(ConflitoException.class, () -> service.update(id, input));
+        ConflitoException ex = assertThrows(ConflitoException.class, () -> service.update(id, input));
+        assertEquals("Já existe um médico cadastrado com o CRM informado.", ex.getMessage());
         verify(medicoRepository, never()).save(any(Medico.class));
     }
 
@@ -214,7 +234,11 @@ class MedicoServiceTest {
         when(medicoRepository.findById(id)).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.excluirMedico(id));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.excluirMedico(id));
+        assertEquals("Médico não encontrado.", ex.getMessage());
+        verify(usuarioRepository, never()).delete(any(Usuario.class));
+        verify(medicoRepository, never()).delete(any(Medico.class));
     }
 
     @Test
@@ -223,7 +247,9 @@ class MedicoServiceTest {
         when(medicoRepository.findByCrm("123456")).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.findByCrm("123456"));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.findByCrm("123456"));
+        assertEquals("Médico com CRM '123456' não encontrado.", ex.getMessage());
     }
 
     @Test
@@ -232,7 +258,9 @@ class MedicoServiceTest {
         when(medicoRepository.findByNome("Inexistente")).thenReturn(List.of());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.findByNome("Inexistente"));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.findByNome("Inexistente"));
+        assertEquals("Nenhum médico encontrado com o nome 'Inexistente'.", ex.getMessage());
     }
 
     @Test
@@ -242,7 +270,10 @@ class MedicoServiceTest {
         when(medicoRepository.findById(id)).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.update(id, criarRequest()));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.update(id, criarRequest()));
+        assertEquals("Médico não encontrado.", ex.getMessage());
+        verify(medicoRepository, never()).save(any(Medico.class));
     }
 
     private MedicoRequest criarRequest() {

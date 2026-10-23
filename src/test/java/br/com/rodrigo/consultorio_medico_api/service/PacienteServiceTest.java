@@ -70,10 +70,16 @@ class PacienteServiceTest {
         // then
         assertEquals(response, resultado);
 
+        verify(passwordEncoder).encode("123456");
         ArgumentCaptor<Usuario> usuarioCaptor = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(usuarioCaptor.capture());
+        assertEquals("paciente@email.com", usuarioCaptor.getValue().getEmail());
         assertEquals("senha-criptografada", usuarioCaptor.getValue().getSenha());
         assertEquals(Role.PACIENTE, usuarioCaptor.getValue().getRole());
+
+        ArgumentCaptor<Paciente> pacienteCaptor = ArgumentCaptor.forClass(Paciente.class);
+        verify(pacienteRepository).save(pacienteCaptor.capture());
+        assertEquals(usuarioCaptor.getValue(), pacienteCaptor.getValue().getUsuario());
     }
 
     @Test
@@ -83,7 +89,9 @@ class PacienteServiceTest {
         when(pacienteRepository.existsByCpf(input.cpf())).thenReturn(true);
 
         // when / then
-        assertThrows(ConflitoException.class, () -> service.save(input));
+        ConflitoException ex = assertThrows(ConflitoException.class, () -> service.save(input));
+        assertEquals("Já existe um paciente cadastrado com o CPF informado.", ex.getMessage());
+        verify(usuarioRepository, never()).existsByEmail(any());
         verify(usuarioRepository, never()).save(any(Usuario.class));
         verify(pacienteRepository, never()).save(any(Paciente.class));
     }
@@ -96,8 +104,10 @@ class PacienteServiceTest {
         when(usuarioRepository.existsByEmail(input.usuario().email())).thenReturn(true);
 
         // when / then
-        assertThrows(ConflitoException.class, () -> service.save(input));
+        ConflitoException ex = assertThrows(ConflitoException.class, () -> service.save(input));
+        assertEquals("Já existe um usuário cadastrado com o e-mail informado.", ex.getMessage());
         verify(usuarioRepository, never()).save(any(Usuario.class));
+        verify(pacienteRepository, never()).save(any(Paciente.class));
     }
 
     @Test
@@ -121,8 +131,13 @@ class PacienteServiceTest {
         // then
         assertEquals(response, resultado);
         assertEquals("Nome Teste", existente.getNome());
+        assertEquals("12345678901", existente.getCpf());
+        assertEquals("(11) 91234-5678", existente.getTelefone());
         assertEquals("Rua Teste, 1", existente.getEndereco());
+        assertEquals(LocalDate.of(1990, 1, 1), existente.getDataNascimento());
+        assertEquals(Paciente.Genero.MASCULINO, existente.getGenero());
         verify(pacienteRepository, never()).existsByCpf(any());
+        verify(pacienteRepository).save(existente);
     }
 
     @Test
@@ -137,7 +152,8 @@ class PacienteServiceTest {
         when(pacienteRepository.existsByCpf(input.cpf())).thenReturn(true);
 
         // when / then
-        assertThrows(ConflitoException.class, () -> service.update(id, input));
+        ConflitoException ex = assertThrows(ConflitoException.class, () -> service.update(id, input));
+        assertEquals("Já existe um paciente cadastrado com o CPF informado.", ex.getMessage());
         verify(pacienteRepository, never()).save(any(Paciente.class));
     }
 
@@ -199,7 +215,9 @@ class PacienteServiceTest {
         when(pacienteRepository.findByCpf("12345678901")).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.findByCpf("12345678901"));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.findByCpf("12345678901"));
+        assertEquals("Paciente com CPF '12345678901' não encontrado.", ex.getMessage());
     }
 
     @Test
@@ -209,7 +227,10 @@ class PacienteServiceTest {
         when(pacienteRepository.findById(id)).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.update(id, criarRequest()));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.update(id, criarRequest()));
+        assertEquals("Paciente não encontrado.", ex.getMessage());
+        verify(pacienteRepository, never()).save(any(Paciente.class));
     }
 
     @Test
@@ -219,7 +240,11 @@ class PacienteServiceTest {
         when(pacienteRepository.findById(id)).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.excluirPaciente(id));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.excluirPaciente(id));
+        assertEquals("Paciente não encontrado.", ex.getMessage());
+        verify(usuarioRepository, never()).delete(any(Usuario.class));
+        verify(pacienteRepository, never()).delete(any(Paciente.class));
     }
 
     private PacienteRequest criarRequest() {

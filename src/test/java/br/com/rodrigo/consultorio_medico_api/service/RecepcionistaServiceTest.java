@@ -59,8 +59,10 @@ class RecepcionistaServiceTest {
         when(recepcionistaRepository.existsByCpf(input.cpf())).thenReturn(true);
 
         // when / then
-        assertThrows(ConflitoException.class, () -> service.save(input));
+        ConflitoException ex = assertThrows(ConflitoException.class, () -> service.save(input));
+        assertEquals("Já existe um recepcionista cadastrado com o CPF informado.", ex.getMessage());
 
+        verify(usuarioRepository, never()).existsByEmail(any());
         verify(usuarioRepository, never()).save(any(Usuario.class));
         verify(recepcionistaRepository, never()).save(any(Recepcionista.class));
     }
@@ -74,7 +76,8 @@ class RecepcionistaServiceTest {
         when(usuarioRepository.existsByEmail(input.usuario().email())).thenReturn(true);
 
         // when / then
-        assertThrows(ConflitoException.class, () -> service.save(input));
+        ConflitoException ex = assertThrows(ConflitoException.class, () -> service.save(input));
+        assertEquals("Já existe um usuário cadastrado com o e-mail informado.", ex.getMessage());
 
         verify(usuarioRepository, never()).save(any(Usuario.class));
         verify(recepcionistaRepository, never()).save(any(Recepcionista.class));
@@ -135,7 +138,12 @@ class RecepcionistaServiceTest {
         // then
         assertEquals(response, resultado);
         assertEquals("Nome Teste", existente.getNome());
+        assertEquals("12345678901", existente.getCpf());
+        assertEquals("(12) 34567-8901", existente.getTelefone());
+        assertEquals(input.dataContratacao(), existente.getDataContratacao());
+        assertEquals(input.status(), existente.isStatus());
         verify(recepcionistaRepository, never()).existsByCpf(any());
+        verify(recepcionistaRepository).save(existente);
     }
 
     @Test
@@ -150,7 +158,8 @@ class RecepcionistaServiceTest {
         when(recepcionistaRepository.existsByCpf(input.cpf())).thenReturn(true);
 
         // when / then
-        assertThrows(ConflitoException.class, () -> service.update(id, input));
+        ConflitoException ex = assertThrows(ConflitoException.class, () -> service.update(id, input));
+        assertEquals("Já existe um recepcionista cadastrado com o CPF informado.", ex.getMessage());
         verify(recepcionistaRepository, never()).save(any(Recepcionista.class));
     }
 
@@ -161,7 +170,10 @@ class RecepcionistaServiceTest {
         when(recepcionistaRepository.findById(id)).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.update(id, criarRequest()));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.update(id, criarRequest()));
+        assertEquals("Recepcionista não encontrado.", ex.getMessage());
+        verify(recepcionistaRepository, never()).save(any(Recepcionista.class));
     }
 
     @Test
@@ -187,7 +199,9 @@ class RecepcionistaServiceTest {
         when(recepcionistaRepository.findByCpf("12345678901")).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.findByCpf("12345678901"));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.findByCpf("12345678901"));
+        assertEquals("Recepcionista com CPF '12345678901' não encontrado.", ex.getMessage());
     }
 
     @Test
@@ -232,7 +246,11 @@ class RecepcionistaServiceTest {
         when(recepcionistaRepository.findById(id)).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.excluirRecepcionista(id));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.excluirRecepcionista(id));
+        assertEquals("Recepcionista não encontrado.", ex.getMessage());
+        verify(usuarioRepository, never()).delete(any(Usuario.class));
+        verify(recepcionistaRepository, never()).delete(any(Recepcionista.class));
     }
 
     private RecepcionistaRequest criarRequest() {

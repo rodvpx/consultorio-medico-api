@@ -82,8 +82,13 @@ class ConsultaServiceTest {
         assertEquals(response, resultado);
         ArgumentCaptor<Consulta> captor = ArgumentCaptor.forClass(Consulta.class);
         verify(consultaRepository).save(captor.capture());
-        assertEquals(Consulta.StatusConsulta.AGENDADA, captor.getValue().getStatus());
-        assertEquals(dataHora, captor.getValue().getDataHora());
+        Consulta consultaPersistida = captor.getValue();
+        assertEquals(Consulta.StatusConsulta.AGENDADA, consultaPersistida.getStatus());
+        assertEquals(dataHora, consultaPersistida.getDataHora());
+        assertEquals("Primeira consulta", consultaPersistida.getObservacoes());
+        assertEquals(paciente, consultaPersistida.getPaciente());
+        assertEquals(medico, consultaPersistida.getMedico());
+        assertEquals(recepcionista, consultaPersistida.getRecepcionista());
     }
 
     @Test
@@ -95,7 +100,48 @@ class ConsultaServiceTest {
         when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.agendarConsulta(input));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.agendarConsulta(input));
+        assertEquals("Paciente não encontrado.", ex.getMessage());
+        verify(consultaRepository, never()).save(any(Consulta.class));
+        verify(medicoRepository, never()).findById(any());
+        verify(recepcionistaRepository, never()).findById(any());
+    }
+
+    @Test
+    void deveLancarNaoEncontradoQuandoMedicoNaoExisteAoAgendar() {
+        // given
+        UUID pacienteId = UUID.randomUUID();
+        UUID medicoId = UUID.randomUUID();
+        ConsultaRequest input = new ConsultaRequest(pacienteId, medicoId, UUID.randomUUID(),
+                LocalDateTime.now().plusDays(1), null);
+        when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.of(new Paciente()));
+        when(medicoRepository.findById(medicoId)).thenReturn(Optional.empty());
+
+        // when / then
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.agendarConsulta(input));
+        assertEquals("Médico não encontrado.", ex.getMessage());
+        verify(consultaRepository, never()).save(any(Consulta.class));
+        verify(recepcionistaRepository, never()).findById(any());
+    }
+
+    @Test
+    void deveLancarNaoEncontradoQuandoRecepcionistaNaoExisteAoAgendar() {
+        // given
+        UUID pacienteId = UUID.randomUUID();
+        UUID medicoId = UUID.randomUUID();
+        UUID recepcionistaId = UUID.randomUUID();
+        ConsultaRequest input = new ConsultaRequest(pacienteId, medicoId, recepcionistaId,
+                LocalDateTime.now().plusDays(1), null);
+        when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.of(new Paciente()));
+        when(medicoRepository.findById(medicoId)).thenReturn(Optional.of(new Medico()));
+        when(recepcionistaRepository.findById(recepcionistaId)).thenReturn(Optional.empty());
+
+        // when / then
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.agendarConsulta(input));
+        assertEquals("Recepcionista não encontrado.", ex.getMessage());
         verify(consultaRepository, never()).save(any(Consulta.class));
     }
 
@@ -118,6 +164,8 @@ class ConsultaServiceTest {
         // then
         assertEquals(response, resultado);
         assertEquals(Consulta.StatusConsulta.CANCELADA, consulta.getStatus());
+        verify(consultaRepository).save(consulta);
+        verify(consultaMapper).toOutput(consulta);
     }
 
     @Test
@@ -127,16 +175,20 @@ class ConsultaServiceTest {
         when(consultaRepository.findById(id)).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class,
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
                 () -> service.atualizarStatus(id, Consulta.StatusConsulta.REALIZADA));
+        assertEquals("Consulta não encontrada.", ex.getMessage());
+        verify(consultaRepository, never()).save(any(Consulta.class));
     }
 
     @Test
     void deveLancarRegraDeNegocioQuandoStatusForNulo() {
         // when / then
-        assertThrows(RegraDeNegocioException.class,
+        RegraDeNegocioException ex = assertThrows(RegraDeNegocioException.class,
                 () -> service.atualizarStatus(UUID.randomUUID(), null));
+        assertEquals("O status da consulta é obrigatório.", ex.getMessage());
         verify(consultaRepository, never()).findById(any());
+        verify(consultaRepository, never()).save(any(Consulta.class));
     }
 
     @Test
@@ -167,6 +219,9 @@ class ConsultaServiceTest {
         when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.buscarConsultasPorPaciente(pacienteId));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.buscarConsultasPorPaciente(pacienteId));
+        assertEquals("Paciente não encontrado.", ex.getMessage());
+        verify(consultaRepository, never()).findByPaciente(any(Paciente.class));
     }
 }

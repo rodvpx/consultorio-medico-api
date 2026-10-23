@@ -10,6 +10,7 @@ import br.com.rodrigo.consultorio_medico_api.repository.ExameMedicoRepository;
 import br.com.rodrigo.consultorio_medico_api.repository.HistoricoMedicoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -50,7 +51,8 @@ class ExameMedicoServiceTest {
         ExameMedicoResponse response = new ExameMedicoResponse(UUID.randomUUID(), "Hemograma", "Normal",
                 input.dataExame(), input.arquivoUrl());
 
-        when(historicoMedicoRepository.findById(historicoId)).thenReturn(Optional.of(new HistoricoMedico()));
+        HistoricoMedico historico = new HistoricoMedico();
+        when(historicoMedicoRepository.findById(historicoId)).thenReturn(Optional.of(historico));
         when(exameMedicoRepository.save(any(ExameMedico.class))).thenReturn(exameSalvo);
         when(exameMedicoMapper.toOutput(exameSalvo)).thenReturn(response);
 
@@ -59,6 +61,14 @@ class ExameMedicoServiceTest {
 
         // then
         assertEquals(response, resultado);
+        ArgumentCaptor<ExameMedico> captor = ArgumentCaptor.forClass(ExameMedico.class);
+        verify(exameMedicoRepository).save(captor.capture());
+        ExameMedico persistido = captor.getValue();
+        assertEquals(historico, persistido.getHistoricoMedico());
+        assertEquals("Hemograma", persistido.getTipoExame());
+        assertEquals("Normal", persistido.getResultado());
+        assertEquals(input.dataExame(), persistido.getDataExame());
+        assertEquals("https://exemplo.com/hemograma.pdf", persistido.getArquivoUrl());
     }
 
     @Test
@@ -68,9 +78,10 @@ class ExameMedicoServiceTest {
         when(historicoMedicoRepository.findById(historicoId)).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class,
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
                 () -> service.adicionarExame(historicoId,
                         new ExameMedicoRequest("Hemograma", "Normal", LocalDateTime.now(), null)));
+        assertEquals("Histórico médico não encontrado.", ex.getMessage());
         verify(exameMedicoRepository, never()).save(any(ExameMedico.class));
     }
 }

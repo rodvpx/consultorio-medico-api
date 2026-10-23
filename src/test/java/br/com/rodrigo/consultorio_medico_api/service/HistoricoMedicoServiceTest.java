@@ -20,6 +20,7 @@ import br.com.rodrigo.consultorio_medico_api.repository.MedicoRepository;
 import br.com.rodrigo.consultorio_medico_api.repository.PacienteRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -74,9 +76,12 @@ class HistoricoMedicoServiceTest {
         HistoricoMedicoResponse response = new HistoricoMedicoResponse(UUID.randomUUID(), "Paciente", "Médico",
                 "REALIZADA", "Hipertensão", "Losartana", "Acompanhamento", LocalDateTime.now());
 
-        when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.of(new Paciente()));
-        when(medicoRepository.findById(medicoId)).thenReturn(Optional.of(new Medico()));
-        when(consultaRepository.findById(consultaId)).thenReturn(Optional.of(new Consulta()));
+        Paciente paciente = new Paciente();
+        Medico medico = new Medico();
+        Consulta consulta = new Consulta();
+        when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.of(paciente));
+        when(medicoRepository.findById(medicoId)).thenReturn(Optional.of(medico));
+        when(consultaRepository.findById(consultaId)).thenReturn(Optional.of(consulta));
         when(historicoMedicoRepository.save(any(HistoricoMedico.class))).thenReturn(historico);
         when(historicoMedicoMapper.toOutput(historico)).thenReturn(response);
 
@@ -85,6 +90,16 @@ class HistoricoMedicoServiceTest {
 
         // then
         assertEquals(response, resultado);
+        ArgumentCaptor<HistoricoMedico> captor = ArgumentCaptor.forClass(HistoricoMedico.class);
+        verify(historicoMedicoRepository).save(captor.capture());
+        HistoricoMedico persistido = captor.getValue();
+        assertEquals(paciente, persistido.getPaciente());
+        assertEquals(medico, persistido.getMedico());
+        assertEquals(consulta, persistido.getConsulta());
+        assertEquals("Hipertensão", persistido.getDiagnostico());
+        assertEquals("Losartana", persistido.getPrescricao());
+        assertEquals("Acompanhamento", persistido.getObservacoes());
+        assertNotNull(persistido.getDataRegistro());
     }
 
     @Test
@@ -94,9 +109,47 @@ class HistoricoMedicoServiceTest {
         when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class,
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
                 () -> service.criarHistorico(pacienteId, UUID.randomUUID(), UUID.randomUUID(),
                         new HistoricoMedicoRequest("Diagnóstico", null, null)));
+        assertEquals("Paciente não encontrado.", ex.getMessage());
+        verify(historicoMedicoRepository, never()).save(any(HistoricoMedico.class));
+        verify(medicoRepository, never()).findById(any());
+        verify(consultaRepository, never()).findById(any());
+    }
+
+    @Test
+    void deveLancarNaoEncontradoQuandoMedicoNaoExisteAoCriarHistorico() {
+        // given
+        UUID pacienteId = UUID.randomUUID();
+        UUID medicoId = UUID.randomUUID();
+        when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.of(new Paciente()));
+        when(medicoRepository.findById(medicoId)).thenReturn(Optional.empty());
+
+        // when / then
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.criarHistorico(pacienteId, medicoId, UUID.randomUUID(),
+                        new HistoricoMedicoRequest("Diagnóstico", null, null)));
+        assertEquals("Médico não encontrado.", ex.getMessage());
+        verify(historicoMedicoRepository, never()).save(any(HistoricoMedico.class));
+        verify(consultaRepository, never()).findById(any());
+    }
+
+    @Test
+    void deveLancarNaoEncontradoQuandoConsultaNaoExisteAoCriarHistorico() {
+        // given
+        UUID pacienteId = UUID.randomUUID();
+        UUID medicoId = UUID.randomUUID();
+        UUID consultaId = UUID.randomUUID();
+        when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.of(new Paciente()));
+        when(medicoRepository.findById(medicoId)).thenReturn(Optional.of(new Medico()));
+        when(consultaRepository.findById(consultaId)).thenReturn(Optional.empty());
+
+        // when / then
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.criarHistorico(pacienteId, medicoId, consultaId,
+                        new HistoricoMedicoRequest("Diagnóstico", null, null)));
+        assertEquals("Consulta não encontrada.", ex.getMessage());
         verify(historicoMedicoRepository, never()).save(any(HistoricoMedico.class));
     }
 
@@ -133,7 +186,9 @@ class HistoricoMedicoServiceTest {
         when(pacienteRepository.findById(pacienteId)).thenReturn(Optional.empty());
 
         // when / then
-        assertThrows(RecursoNaoEncontradoException.class, () -> service.buscarPorPaciente(pacienteId));
+        RecursoNaoEncontradoException ex = assertThrows(RecursoNaoEncontradoException.class,
+                () -> service.buscarPorPaciente(pacienteId));
+        assertEquals("Paciente não encontrado.", ex.getMessage());
         verify(historicoMedicoRepository, never()).findByPaciente(any(Paciente.class));
     }
 

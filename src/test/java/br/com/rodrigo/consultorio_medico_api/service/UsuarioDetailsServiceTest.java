@@ -15,6 +15,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,6 +46,7 @@ class UsuarioDetailsServiceTest {
                 .singleElement()
                 .extracting(authority -> authority.getAuthority())
                 .isEqualTo("ROLE_ADMIN");
+        verify(usuarioRepository).findByEmail("admin@example.com");
     }
 
     @Test
@@ -64,6 +66,7 @@ class UsuarioDetailsServiceTest {
                 .singleElement()
                 .extracting(authority -> authority.getAuthority())
                 .isEqualTo("ROLE_PACIENTE");
+        verify(usuarioRepository).findByEmail("legado@example.com");
     }
 
     @Test
@@ -74,6 +77,7 @@ class UsuarioDetailsServiceTest {
         // when / then
         assertThatThrownBy(() -> service.loadUserByUsername("naoexiste@example.com"))
                 .isInstanceOf(UsernameNotFoundException.class)
-                .hasMessageContaining("Usuário não encontrado");
+                .hasMessage("Usuário não encontrado para o e-mail informado.");
+        verify(usuarioRepository).findByEmail("naoexiste@example.com");
     }
 }
