@@ -99,6 +99,125 @@ class MedicoServiceTest {
     }
 
     @Test
+    void deveAtualizarMedicoExistente() {
+        // given
+        UUID id = UUID.randomUUID();
+        MedicoRequest input = criarRequest();
+        Medico existente = new Medico();
+        existente.setId(id);
+        existente.setCrm(input.crm());
+        MedicoResponse response = new MedicoResponse(id, input.nome(), input.crm(),
+                input.especialidade(), input.dataContratacao(), input.status());
+
+        when(medicoRepository.findById(id)).thenReturn(Optional.of(existente));
+        when(medicoRepository.save(existente)).thenReturn(existente);
+        when(medicoMapper.toOutput(existente)).thenReturn(response);
+
+        // when
+        MedicoResponse resultado = service.update(id, input);
+
+        // then
+        assertEquals(response, resultado);
+        assertEquals("Dr. Teste", existente.getNome());
+        verify(medicoRepository, never()).existsByCrm(any());
+    }
+
+    @Test
+    void deveLancarConflitoAoAtualizarMedicoComCrmDeOutroMedico() {
+        // given
+        UUID id = UUID.randomUUID();
+        MedicoRequest input = criarRequest();
+        Medico existente = new Medico();
+        existente.setCrm("654321");
+
+        when(medicoRepository.findById(id)).thenReturn(Optional.of(existente));
+        when(medicoRepository.existsByCrm(input.crm())).thenReturn(true);
+
+        // when / then
+        assertThrows(ConflitoException.class, () -> service.update(id, input));
+        verify(medicoRepository, never()).save(any(Medico.class));
+    }
+
+    @Test
+    void deveBuscarMedicoPorCrmExistente() {
+        // given
+        Medico medico = new Medico();
+        MedicoResponse response = new MedicoResponse(UUID.randomUUID(), "Dr. Teste", "123456",
+                Medico.Especialidade.CARDIOLOGIA, LocalDate.of(2023, 1, 1), true);
+
+        when(medicoRepository.findByCrm("123456")).thenReturn(Optional.of(medico));
+        when(medicoMapper.toOutput(medico)).thenReturn(response);
+
+        // when
+        MedicoResponse resultado = service.findByCrm("123456");
+
+        // then
+        assertEquals(response, resultado);
+    }
+
+    @Test
+    void deveBuscarMedicosPorNome() {
+        // given
+        Medico medico = new Medico();
+        MedicoResponse response = new MedicoResponse(UUID.randomUUID(), "Dr. Teste", "123456",
+                Medico.Especialidade.CARDIOLOGIA, LocalDate.of(2023, 1, 1), true);
+
+        when(medicoRepository.findByNome("Dr. Teste")).thenReturn(List.of(medico));
+        when(medicoMapper.toOutputList(List.of(medico))).thenReturn(List.of(response));
+
+        // when
+        List<MedicoResponse> resultado = service.findByNome("Dr. Teste");
+
+        // then
+        assertEquals(List.of(response), resultado);
+    }
+
+    @Test
+    void deveListarTodosOsMedicos() {
+        // given
+        Medico medico = new Medico();
+        MedicoResponse response = new MedicoResponse(UUID.randomUUID(), "Dr. Teste", "123456",
+                Medico.Especialidade.CARDIOLOGIA, LocalDate.of(2023, 1, 1), true);
+
+        when(medicoRepository.findAll()).thenReturn(List.of(medico));
+        when(medicoMapper.toOutputList(List.of(medico))).thenReturn(List.of(response));
+
+        // when
+        List<MedicoResponse> resultado = service.findAll();
+
+        // then
+        assertEquals(List.of(response), resultado);
+    }
+
+    @Test
+    void deveExcluirMedicoEUsuarioAssociado() {
+        // given
+        UUID id = UUID.randomUUID();
+        Usuario usuario = new Usuario();
+        Medico medico = new Medico();
+        medico.setUsuario(usuario);
+
+        when(medicoRepository.findById(id)).thenReturn(Optional.of(medico));
+
+        // when
+        service.excluirMedico(id);
+
+        // then
+        verify(usuarioRepository).delete(usuario);
+        verify(medicoRepository).delete(medico);
+    }
+
+    @Test
+    void deveLancarNaoEncontradoAoExcluirMedicoInexistente() {
+        // given
+        UUID id = UUID.randomUUID();
+        when(medicoRepository.findById(id)).thenReturn(Optional.empty());
+
+        // when / then
+        assertThrows(RecursoNaoEncontradoException.class, () -> service.excluirMedico(id));
+    }
+
+    @Test
     void deveLancarNaoEncontradoAoBuscarMedicoPorCrmInexistente() {
         // given
         when(medicoRepository.findByCrm("123456")).thenReturn(Optional.empty());

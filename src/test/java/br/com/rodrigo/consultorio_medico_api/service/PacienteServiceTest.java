@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -97,6 +98,99 @@ class PacienteServiceTest {
         // when / then
         assertThrows(ConflitoException.class, () -> service.save(input));
         verify(usuarioRepository, never()).save(any(Usuario.class));
+    }
+
+    @Test
+    void deveAtualizarPacienteExistente() {
+        // given
+        UUID id = UUID.randomUUID();
+        PacienteRequest input = criarRequest();
+        Paciente existente = new Paciente();
+        existente.setId(id);
+        existente.setCpf(input.cpf());
+        PacienteResponse response = new PacienteResponse(id, input.nome(), input.cpf(),
+                input.dataNascimento(), input.genero());
+
+        when(pacienteRepository.findById(id)).thenReturn(Optional.of(existente));
+        when(pacienteRepository.save(existente)).thenReturn(existente);
+        when(pacienteMapper.toOutput(existente)).thenReturn(response);
+
+        // when
+        PacienteResponse resultado = service.update(id, input);
+
+        // then
+        assertEquals(response, resultado);
+        assertEquals("Nome Teste", existente.getNome());
+        assertEquals("Rua Teste, 1", existente.getEndereco());
+        verify(pacienteRepository, never()).existsByCpf(any());
+    }
+
+    @Test
+    void deveLancarConflitoAoAtualizarPacienteComCpfDeOutroPaciente() {
+        // given
+        UUID id = UUID.randomUUID();
+        PacienteRequest input = criarRequest();
+        Paciente existente = new Paciente();
+        existente.setCpf("99999999999");
+
+        when(pacienteRepository.findById(id)).thenReturn(Optional.of(existente));
+        when(pacienteRepository.existsByCpf(input.cpf())).thenReturn(true);
+
+        // when / then
+        assertThrows(ConflitoException.class, () -> service.update(id, input));
+        verify(pacienteRepository, never()).save(any(Paciente.class));
+    }
+
+    @Test
+    void deveBuscarPacientePorCpfExistente() {
+        // given
+        Paciente paciente = new Paciente();
+        PacienteResponse response = new PacienteResponse(UUID.randomUUID(), "João", "12345678901",
+                LocalDate.of(1990, 1, 1), Paciente.Genero.MASCULINO);
+
+        when(pacienteRepository.findByCpf("12345678901")).thenReturn(Optional.of(paciente));
+        when(pacienteMapper.toOutput(paciente)).thenReturn(response);
+
+        // when
+        PacienteResponse resultado = service.findByCpf("12345678901");
+
+        // then
+        assertEquals(response, resultado);
+    }
+
+    @Test
+    void deveListarTodosOsPacientes() {
+        // given
+        Paciente paciente = new Paciente();
+        PacienteResponse response = new PacienteResponse(UUID.randomUUID(), "João", "12345678901",
+                LocalDate.of(1990, 1, 1), Paciente.Genero.MASCULINO);
+
+        when(pacienteRepository.findAll()).thenReturn(List.of(paciente));
+        when(pacienteMapper.toOutputList(List.of(paciente))).thenReturn(List.of(response));
+
+        // when
+        List<PacienteResponse> resultado = service.findAll();
+
+        // then
+        assertEquals(List.of(response), resultado);
+    }
+
+    @Test
+    void deveExcluirPacienteEUsuarioAssociado() {
+        // given
+        UUID id = UUID.randomUUID();
+        Usuario usuario = new Usuario();
+        Paciente paciente = new Paciente();
+        paciente.setUsuario(usuario);
+
+        when(pacienteRepository.findById(id)).thenReturn(Optional.of(paciente));
+
+        // when
+        service.excluirPaciente(id);
+
+        // then
+        verify(usuarioRepository).delete(usuario);
+        verify(pacienteRepository).delete(paciente);
     }
 
     @Test

@@ -4,9 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import br.com.rodrigo.consultorio_medico_api.entity.Role;
 import br.com.rodrigo.consultorio_medico_api.exception.ConflitoException;
+import br.com.rodrigo.consultorio_medico_api.exception.RecursoNaoEncontradoException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -108,6 +112,127 @@ class RecepcionistaServiceTest {
         ArgumentCaptor<Recepcionista> recepcionistaCaptor = ArgumentCaptor.forClass(Recepcionista.class);
         verify(recepcionistaRepository).save(recepcionistaCaptor.capture());
         assertEquals(usuarioCapturado, recepcionistaCaptor.getValue().getUsuario());
+    }
+
+    @Test
+    void deveAtualizarRecepcionistaExistente() {
+        // given
+        UUID id = UUID.randomUUID();
+        RecepcionistaRequest input = criarRequest();
+        Recepcionista existente = new Recepcionista();
+        existente.setId(id);
+        existente.setCpf(input.cpf());
+        RecepcionistaResponse response = new RecepcionistaResponse(id, input.nome(), input.cpf(),
+                input.dataContratacao(), input.status());
+
+        when(recepcionistaRepository.findById(id)).thenReturn(Optional.of(existente));
+        when(recepcionistaRepository.save(existente)).thenReturn(existente);
+        when(recepcionistaMapper.toOutput(existente)).thenReturn(response);
+
+        // when
+        RecepcionistaResponse resultado = service.update(id, input);
+
+        // then
+        assertEquals(response, resultado);
+        assertEquals("Nome Teste", existente.getNome());
+        verify(recepcionistaRepository, never()).existsByCpf(any());
+    }
+
+    @Test
+    void deveLancarConflitoAoAtualizarRecepcionistaComCpfDeOutro() {
+        // given
+        UUID id = UUID.randomUUID();
+        RecepcionistaRequest input = criarRequest();
+        Recepcionista existente = new Recepcionista();
+        existente.setCpf("99999999999");
+
+        when(recepcionistaRepository.findById(id)).thenReturn(Optional.of(existente));
+        when(recepcionistaRepository.existsByCpf(input.cpf())).thenReturn(true);
+
+        // when / then
+        assertThrows(ConflitoException.class, () -> service.update(id, input));
+        verify(recepcionistaRepository, never()).save(any(Recepcionista.class));
+    }
+
+    @Test
+    void deveLancarNaoEncontradoAoAtualizarRecepcionistaInexistente() {
+        // given
+        UUID id = UUID.randomUUID();
+        when(recepcionistaRepository.findById(id)).thenReturn(Optional.empty());
+
+        // when / then
+        assertThrows(RecursoNaoEncontradoException.class, () -> service.update(id, criarRequest()));
+    }
+
+    @Test
+    void deveBuscarRecepcionistaPorCpfExistente() {
+        // given
+        Recepcionista recepcionista = new Recepcionista();
+        RecepcionistaResponse response = new RecepcionistaResponse(UUID.randomUUID(), "Ana",
+                "12345678901", LocalDate.now(), true);
+
+        when(recepcionistaRepository.findByCpf("12345678901")).thenReturn(Optional.of(recepcionista));
+        when(recepcionistaMapper.toOutput(recepcionista)).thenReturn(response);
+
+        // when
+        RecepcionistaResponse resultado = service.findByCpf("12345678901");
+
+        // then
+        assertEquals(response, resultado);
+    }
+
+    @Test
+    void deveLancarNaoEncontradoAoBuscarRecepcionistaPorCpfInexistente() {
+        // given
+        when(recepcionistaRepository.findByCpf("12345678901")).thenReturn(Optional.empty());
+
+        // when / then
+        assertThrows(RecursoNaoEncontradoException.class, () -> service.findByCpf("12345678901"));
+    }
+
+    @Test
+    void deveListarTodosOsRecepcionistas() {
+        // given
+        Recepcionista recepcionista = new Recepcionista();
+        RecepcionistaResponse response = new RecepcionistaResponse(UUID.randomUUID(), "Ana",
+                "12345678901", LocalDate.now(), true);
+
+        when(recepcionistaRepository.findAll()).thenReturn(List.of(recepcionista));
+        when(recepcionistaMapper.toOutputList(List.of(recepcionista))).thenReturn(List.of(response));
+
+        // when
+        List<RecepcionistaResponse> resultado = service.findAll();
+
+        // then
+        assertEquals(List.of(response), resultado);
+    }
+
+    @Test
+    void deveExcluirRecepcionistaEUsuarioAssociado() {
+        // given
+        UUID id = UUID.randomUUID();
+        Usuario usuario = new Usuario();
+        Recepcionista recepcionista = new Recepcionista();
+        recepcionista.setUsuario(usuario);
+
+        when(recepcionistaRepository.findById(id)).thenReturn(Optional.of(recepcionista));
+
+        // when
+        service.excluirRecepcionista(id);
+
+        // then
+        verify(usuarioRepository).delete(usuario);
+        verify(recepcionistaRepository).delete(recepcionista);
+    }
+
+    @Test
+    void deveLancarNaoEncontradoAoExcluirRecepcionistaInexistente() {
+        // given
+        UUID id = UUID.randomUUID();
+        when(recepcionistaRepository.findById(id)).thenReturn(Optional.empty());
+
+        // when / then
+        assertThrows(RecursoNaoEncontradoException.class, () -> service.excluirRecepcionista(id));
     }
 
     private RecepcionistaRequest criarRequest() {
